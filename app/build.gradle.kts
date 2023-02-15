@@ -2,7 +2,7 @@ import com.example.buildsrc.Apps
 import com.example.buildsrc.Libs
 
 plugins {
-    id("com.android.library")
+    id("com.android.application")
     kotlin("android")
     kotlin("kapt")
     id("dagger.hilt.android.plugin")
@@ -13,7 +13,6 @@ android {
     compileSdk = Apps.COMPILE_SDK
 
     defaultConfig {
-
         applicationId = Apps.APPLICATION_ID
         minSdk = Apps.MIN_SDK
         targetSdk = Apps.TARGET_SDK
