@@ -13,6 +13,7 @@ android {
     compileSdk = Apps.COMPILE_SDK
 
     defaultConfig {
+
         applicationId = Apps.APPLICATION_ID
         minSdk = Apps.MIN_SDK
         targetSdk = Apps.TARGET_SDK
@@ -75,5 +76,43 @@ dependencies {
 
     implementation(Libs.retrofit)
 
-    implementation(Libs.shimmer)
+    //implementation(Libs.shimmer)
+
+    val composeBom = platform("androidx.compose:compose-bom:2022.12.00")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+
+    implementation(Libs.compose_material3)
+    // or Material Design 2
+    implementation(Libs.compose_material)
+    // or skip Material Design and build directly on top of foundational components
+    implementation(Libs.compose_foundation)
+    // or only import the main APIs for the underlying toolkit systems,
+    // such as input and measurement/layout
+    implementation(Libs.compose_ui)
+
+
+    // Android Studio Preview support
+    implementation(Libs.compose_ui_tooling_preview)
+    debugImplementation(Libs.compose_ui_tooling)
+
+    // UI Tests
+    androidTestImplementation(Libs.compose_ui_test)
+    debugImplementation(Libs.compose_ui_debug)
+
+
+
+    implementation(Libs.compose_icons_core)
+    // Optional - Add full set of material icons
+    implementation(Libs.compose_icons_extended)
+    // Optional - Add window size utils
+    implementation(Libs.compose_window_size)
+
+    // Optional - Integration with activities
+    implementation(Libs.compose_activity)
+    // Optional - Integration with ViewModels
+    implementation(Libs.compose_viewmodel)
+    // Optional - Integration with LiveData
+    implementation(Libs.compose_livedata)
 }

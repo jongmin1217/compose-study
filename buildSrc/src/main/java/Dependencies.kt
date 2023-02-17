@@ -11,7 +11,7 @@ object Apps{
 
 object Versions{
     const val gradle = "7.2.2"
-    const val kotlin = "1.6.10"
+    const val kotlin = "1.7.20"
     const val jetbrains = "1.7.20"
     
     const val coreKtx = "1.6.0"
@@ -50,6 +50,8 @@ object Versions{
     const val compose_activity = "1.5.1"
 
     const val compose_lifecycle = "2.5.1"
+
+    const val compose = "1.2.0"
 
 }
 
@@ -102,11 +104,11 @@ object Libs{
     const val compose_foundation = "androidx.compose.foundation:foundation"
     // or only import the main APIs for the underlying toolkit systems,
     // such as input and measurement/layout
-    const val compose_ui = "androidx.compose.ui:ui"
+    const val compose_ui = "androidx.compose.ui:ui:1.2.0"
 
     // Android Studio Preview support
     const val compose_ui_tooling_preview = "androidx.compose.ui:ui-tooling-preview"
-    const val compose_ui_tooling = "androidx.compose.ui:ui-tooling"
+    const val compose_ui_tooling = "androidx.compose.ui:ui-tooling:1.2.0"
 
     // UI Tests
     const val compose_ui_test = "androidx.compose.ui:ui-test-junit4"

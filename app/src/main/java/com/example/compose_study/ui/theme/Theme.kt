@@ -17,17 +17,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
 
 private val DarkColorScheme = darkColorScheme(
-    surface = Blue,
-    onSurface = Navy,
-    primary = Navy,
-    onPrimary = Chartreuse
+    surface = Color.White,
+    onSurface = Color.White,
+    primary = Color.White,
+    onPrimary = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
-    surface = Blue,
+    surface = Color.White,
     onSurface = Color.White,
-    primary = LightBlue,
-    onPrimary = Navy
+    primary = Color.White,
+    onPrimary = Color.White
 )
 
 @Composable
@@ -48,8 +48,8 @@ fun ComposestudyTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            (view.context as Activity).window.statusBarColor = colorScheme.primary.toArgb()
-            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = darkTheme
+            (view.context as Activity).window.statusBarColor = Color.White.toArgb()
+            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = true
         }
     }
 
