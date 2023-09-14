@@ -3,4 +3,14 @@
 
     <string name="show_less">Show less</string>
     <string name="show_more">Show more</string>
+
+    <string name="login_activity_welcome" translatable="false">
+        <![CDATA[
+            <span>
+            반려견과의 산책<br/>
+            <font color="#ff4857">펫핑</font>과 함께<br/>
+            시작해 보세요!
+            <span>
+        ]]>
+    </string>
 </resources>

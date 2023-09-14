@@ -8,6 +8,7 @@ buildscript {
         classpath(com.example.buildsrc.Libs.kotlin)
         classpath(com.example.buildsrc.Libs.hiltPlugin)
 
+
     }
 }
 plugins {
