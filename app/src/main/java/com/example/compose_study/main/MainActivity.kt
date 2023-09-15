@@ -63,7 +63,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 
-const val START_PADDING = 35
+const val START_PADDING = 46
 const val BOTTOM_PADDING = 17
 
 class MainActivity : ComponentActivity() {
@@ -148,7 +148,7 @@ class MainActivity : ComponentActivity() {
         GraphPoint(0, "09-01", 30),
         GraphPoint(1, "09-02", 37),
         GraphPoint(2, "09-03", 120),
-        GraphPoint(3, "09-04", 24),
+        GraphPoint(3, "09-04", 20),
         GraphPoint(4, "09-05", 50),
         GraphPoint(5, "09-06", 65),
         GraphPoint(6, "09-07", 25)
@@ -174,14 +174,15 @@ class MainActivity : ComponentActivity() {
                     Graph(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(238.dp),
+                            .height(200.dp),
                         xSize = if (test) 5 else 7,
                         ySize = 5,
                         points = if (test) {
                             if (test2) list30 else list30_2
                         } else {
                             if (test2) list7 else list7_2
-                        }
+                        },
+                        isVisibleXClickLabel = test
                     )
 
                     Spacer(modifier = Modifier.height(50.dp))
@@ -214,7 +215,8 @@ fun Graph(
     dragLineColor : Color = Color(0xFFFF8B95),
     textColor : Int = android.graphics.Color.parseColor("#FFAAAAAA"),
     lineTextSize : Int = 11,
-    enableVibrator : Boolean = true
+    enableVibrator : Boolean = true,
+    isVisibleXClickLabel : Boolean = false
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -347,7 +349,7 @@ fun Graph(
 
                 drawLine(
                     start = Offset(
-                        x = START_PADDING.dp.toPx(),
+                        x = START_PADDING.dp.toPx() - 11.dp.toPx(),
                         y = (size.height - BOTTOM_PADDING.dp.toPx()) - yAxisSpace * (i)
                     ),
                     end = Offset(
@@ -423,7 +425,7 @@ fun Graph(
                                 }
                             }
                         }
-                        pointList.add(SelectPoint(x, y, points[i].y))
+                        pointList.add(SelectPoint(x, y, points[i].y,points[i].x))
                     } else {
                         when (i) {
                             0 -> {
@@ -521,6 +523,7 @@ fun Graph(
             var layoutWidthOffset by remember { mutableStateOf(0f) }
             var layoutHeightOffset by remember { mutableStateOf(0f) }
 
+
             DimensionSubComposeLayout(
                 modifier = Modifier.align(TopStart),
                 mainContent = {
@@ -570,6 +573,49 @@ fun Graph(
                 layoutWidthOffset = it.width / 2
                 layoutHeightOffset = it.height + 11.dpToPixels(context)
             }
+
+            if(isVisibleXClickLabel){
+                var xLabelWidthOffset by remember { mutableStateOf(0f) }
+
+                DimensionSubComposeLayout(
+                    modifier = Modifier.align(TopStart),
+                    mainContent = {
+                        Column(
+                            modifier = Modifier
+                                .offset {
+                                    IntOffset(
+                                        (clickBarOffsetX - layoutWidthOffset).roundToInt(),
+                                        188.dp.toPx().roundToInt()
+                                    )
+                                }
+                        ) {
+
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFF222222)
+                                    )
+                            ) {
+                                Text(
+                                    text = selectPoint.xLabel,
+                                    modifier = Modifier
+                                        .padding(horizontal = 7.dp, vertical = 6.dp)
+                                        .align(Center),
+                                    style = TextStyle(
+                                        fontSize = 12.dp.textSp,
+                                        color = Color(0xffffffff),
+                                        fontWeight = FontWeight.W700
+                                    ),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                ) {
+                    xLabelWidthOffset = it.width / 2
+                }
+            }
         }
     }
 }
@@ -584,7 +630,8 @@ data class GraphPoint(
 data class SelectPoint(
     val x: Float = 0f,
     val y: Float = 0f,
-    val value: Int = 0
+    val value: Int = 0,
+    val xLabel : String = ""
 ) {
     fun getOffset() = Offset(x, y)
 }
