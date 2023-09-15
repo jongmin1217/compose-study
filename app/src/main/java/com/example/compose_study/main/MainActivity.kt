@@ -3,7 +3,6 @@ package com.example.compose_study.main
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.ContextWrapper
-import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,9 +21,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 
 import android.graphics.Paint
 import android.graphics.PointF
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
+import android.os.*
 import android.util.TypedValue
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -81,7 +78,7 @@ class MainActivity : ComponentActivity() {
         GraphPoint(6, "09-07", 25),
         GraphPoint(7, "09-08", 77),
         GraphPoint(8, "09-09", 50),
-        GraphPoint(9, "09-10", 1100),
+        GraphPoint(9, "09-10", 1000),
         GraphPoint(10, "09-11", 25),
         GraphPoint(11, "09-12", 37),
         GraphPoint(12, "09-13", 23),
@@ -185,21 +182,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             if (test2) list7 else list7_2
                         }
-                    ) {
-                        try {
-                            val vibrator =
-                                getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                            vibrator.defaultVibrator.vibrate(
-                                VibrationEffect.createWaveform(
-                                    longArrayOf(10),
-                                    intArrayOf(0, 10), -1
-                                )
-                            )
-                        } catch (e: Exception) {
-                            val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-                            vibrator.vibrate(10)
-                        }
-                    }
+                    )
 
                     Spacer(modifier = Modifier.height(50.dp))
                     Row(modifier = Modifier.height(50.dp)) {
@@ -221,7 +204,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-@SuppressLint("NewApi")
 fun Graph(
     modifier: Modifier,
     xSize: Int,
@@ -232,12 +214,13 @@ fun Graph(
     dragLineColor : Color = Color(0xFFFF8B95),
     textColor : Int = android.graphics.Color.parseColor("#FFAAAAAA"),
     lineTextSize : Int = 11,
-    onVibrator: () -> Unit
+    enableVibrator : Boolean = true
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val width = configuration.screenWidthDp.dpToPixels(context)
+
 
     val xTextPaint = remember(density) {
         Paint().apply {
@@ -276,7 +259,18 @@ fun Graph(
     }
 
     LaunchedEffect(selectPoint) {
-        if (selectPoint.x != 0f) onVibrator.invoke()
+        if (selectPoint.x != 0f && enableVibrator){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (context.getSystemService(ComponentActivity.VIBRATOR_MANAGER_SERVICE) as VibratorManager).run {
+                    defaultVibrator.vibrate(
+                        VibrationEffect.createOneShot(10,70)
+                    )
+                }
+            }else{
+                val vibrator = context.getSystemService(ComponentActivity.VIBRATOR_SERVICE) as Vibrator
+                vibrator.vibrate(10)
+            }
+        }
     }
 
     Box(
@@ -557,7 +551,7 @@ fun Graph(
                                     color = Color(0xffffffff),
                                     fontWeight = FontWeight.W700
                                 ),
-                                textAlign = TextAlign.End
+                                textAlign = TextAlign.Center
                             )
                         }
 
@@ -574,7 +568,7 @@ fun Graph(
                 }
             ) {
                 layoutWidthOffset = it.width / 2
-                layoutHeightOffset = it.height + 10.dpToPixels(context)
+                layoutHeightOffset = it.height + 11.dpToPixels(context)
             }
         }
     }
