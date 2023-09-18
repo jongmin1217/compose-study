@@ -6,9 +6,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.DpSize
+
 @Composable
 fun DimensionSubComposeLayout(
     modifier: Modifier = Modifier,
@@ -20,22 +19,20 @@ fun DimensionSubComposeLayout(
         modifier = modifier
     ) { constraints: Constraints ->
 
-        // Subcompose(compose only a section) main content and get Placeable
-        val mainPlaceables: List<Placeable> = subcompose(SlotsEnum.Main, mainContent)
+        val mainPlaceAbles: List<Placeable> = subcompose(SlotsEnum.Main, mainContent)
             .map {
                 it.measure(constraints.copy(minWidth = 0, minHeight = 0))
             }
 
-        // Get max width and height of main component
         var maxWidth = 0
         var maxHeight = 0
 
-        mainPlaceables.forEach { placeable: Placeable ->
+        mainPlaceAbles.forEach { placeable: Placeable ->
             maxWidth += placeable.width
             maxHeight = placeable.height
         }
 
-        val dependentPlaceables: List<Placeable> = subcompose(SlotsEnum.Dependent) {
+        val dependentPlaceAbles: List<Placeable> = subcompose(SlotsEnum.Dependent) {
             dependentContent(Size(maxWidth.toFloat(), maxHeight.toFloat()))
         }
             .map { measurable: Measurable ->
@@ -46,12 +43,12 @@ fun DimensionSubComposeLayout(
         layout(maxWidth, maxHeight) {
 
             if (placeMainContent) {
-                mainPlaceables.forEach { placeable: Placeable ->
+                mainPlaceAbles.forEach { placeable: Placeable ->
                     placeable.placeRelative(0, 0)
                 }
             }
 
-            dependentPlaceables.forEach { placeable: Placeable ->
+            dependentPlaceAbles.forEach { placeable: Placeable ->
                 placeable.placeRelative(0, 0)
             }
         }

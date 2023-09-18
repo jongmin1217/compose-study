@@ -2,50 +2,34 @@ package com.example.compose_study.main
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.ContextWrapper
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.Surface
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.input.TextFieldValue
-
 import android.graphics.Paint
-import android.graphics.PointF
 import android.os.*
 import android.util.TypedValue
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.BottomEnd
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
-import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -53,9 +37,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
 import com.example.compose_study.R
+import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -69,36 +52,36 @@ const val BOTTOM_PADDING = 17
 class MainActivity : ComponentActivity() {
 
     val list30 = listOf(
-        GraphPoint(0, "09-01", 30),
-        GraphPoint(1, "09-02", 37),
-        GraphPoint(2, "09-03", 22),
-        GraphPoint(3, "09-04", 24),
-        GraphPoint(4, "09-05", 50),
+        GraphPoint(0, "09-01", 300),
+        GraphPoint(1, "09-02", 370),
+        GraphPoint(2, "09-03", 220),
+        GraphPoint(3, "09-04", 240),
+        GraphPoint(4, "09-05", 500),
         GraphPoint(5, "09-06", 112),
-        GraphPoint(6, "09-07", 25),
-        GraphPoint(7, "09-08", 77),
-        GraphPoint(8, "09-09", 50),
+        GraphPoint(6, "09-07", 250),
+        GraphPoint(7, "09-08", 770),
+        GraphPoint(8, "09-09", 500),
         GraphPoint(9, "09-10", 1000),
-        GraphPoint(10, "09-11", 25),
-        GraphPoint(11, "09-12", 37),
-        GraphPoint(12, "09-13", 23),
+        GraphPoint(10, "09-11", 250),
+        GraphPoint(11, "09-12", 370),
+        GraphPoint(12, "09-13", 230),
         GraphPoint(13, "09-14", 113),
-        GraphPoint(14, "09-15", 50),
-        GraphPoint(15, "09-16", 13),
-        GraphPoint(16, "09-17", 25),
-        GraphPoint(17, "09-18", 24),
-        GraphPoint(18, "09-19", 50),
+        GraphPoint(14, "09-15", 500),
+        GraphPoint(15, "09-16", 130),
+        GraphPoint(16, "09-17", 250),
+        GraphPoint(17, "09-18", 240),
+        GraphPoint(18, "09-19", 500),
         GraphPoint(19, "09-20", 1320),
-        GraphPoint(20, "09-21", 25),
-        GraphPoint(21, "09-22", 37),
+        GraphPoint(20, "09-21", 250),
+        GraphPoint(21, "09-22", 370),
         GraphPoint(22, "09-23", 178),
-        GraphPoint(23, "09-24", 24),
-        GraphPoint(24, "09-25", 50),
-        GraphPoint(25, "09-26", 51),
-        GraphPoint(26, "09-27", 25),
-        GraphPoint(27, "09-28", 24),
-        GraphPoint(28, "09-29", 25),
-        GraphPoint(29, "09-30", 24)
+        GraphPoint(23, "09-24", 240),
+        GraphPoint(24, "09-25", 500),
+        GraphPoint(25, "09-26", 510),
+        GraphPoint(26, "09-27", 250),
+        GraphPoint(27, "09-28", 240),
+        GraphPoint(28, "09-29", 250),
+        GraphPoint(29, "09-30", 240)
     )
 
     val list7_2 = listOf(
@@ -154,23 +137,65 @@ class MainActivity : ComponentActivity() {
         GraphPoint(6, "09-07", 25)
     )
 
+    @OptIn(ExperimentalFoundationApi::class)
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 
         setContent {
-            var test by remember {
-                mutableStateOf(false)
-            }
+            val state = rememberPagerState()
+            val scope = rememberCoroutineScope()
+            val scrollState = rememberScrollState()
 
-            var test2 by remember {
-                mutableStateOf(false)
-            }
+            var test by remember { mutableStateOf(false) }
+            var test2 by remember { mutableStateOf(false) }
+
 
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Spacer(modifier = Modifier.height(50.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                ) {
+                    HorizontalPager(
+                        pageCount = 12,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .background(Color(0xffbbbbbb)),
+                        state = state
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Text(
+                                text = "${it + 1}",
+                                modifier = Modifier.align(Center),
+                                style = TextStyle(fontSize = 20.dp.textSp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    BarGraph(
+                        modifier = Modifier.fillMaxWidth(),
+                        valueList = listOf(0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3),
+                        selectIndex = state.targetPage,
+                        monthlyCount = listOf(
+                            MonthlyCount(7, 5),
+                            MonthlyCount(8, 4),
+                            MonthlyCount(9, 3)
+                        )
+                    ) {
+                        scope.launch {
+                            state.animateScrollToPage(it)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(70.dp))
+
                     Graph(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -183,18 +208,22 @@ class MainActivity : ComponentActivity() {
                             if (test2) list7 else list7_2
                         },
                         isVisibleXClickLabel = test
-                    )
+                    ){
+                        scope.launch {
+                            scrollState.scrollBy(-it)
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(50.dp))
                     Row(modifier = Modifier.height(50.dp)) {
                         Button(onClick = { test = !test }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "sdfgssadfghdsa")
+                            Text(text = "월/주")
                         }
 
                         Spacer(modifier = Modifier.width(50.dp))
 
                         Button(onClick = { test2 = !test2 }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "sdfgssadfghdsa")
+                            Text(text = "데이터 on/off")
                         }
                     }
 
@@ -204,6 +233,142 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+data class MonthlyCount(
+    val month: Int,
+    val count: Int
+)
+
+data class BarData(
+    val index: Int,
+    val top: Float,
+    val bottom: Float,
+    val left: Float,
+    val right: Float
+)
+
+@Composable
+fun BarGraph(
+    modifier: Modifier,
+    valueList: List<Int>,
+    selectIndex: Int,
+    monthlyCount: List<MonthlyCount>,
+    textColor: Int = android.graphics.Color.parseColor("#FF777777"),
+    lineTextSize: Int = 12,
+    onClick: (Int) -> Unit
+) {
+    val density = LocalDensity.current
+
+    val textPaint = remember(density) {
+        Paint().apply {
+            color = textColor
+            textAlign = Paint.Align.CENTER
+            textSize = density.run { lineTextSize.dp.toPx() }
+        }
+    }
+
+    var viewHeight by remember { mutableStateOf(0.dp) }
+    var clickOffset by remember { mutableStateOf(Offset(0f, 0f)) }
+
+    Box(
+        modifier = modifier.then(
+            Modifier
+                .background(Color.White)
+                .padding(horizontal = 20.dp)
+        ),
+        contentAlignment = Center
+    ) {
+        Canvas(
+            modifier = modifier
+                .height(viewHeight)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            clickOffset = it
+                        }
+                    )
+                }
+        ) {
+            val barWidth = (size.width - (7 * (valueList.size - 1)).dp.toPx()) / valueList.size
+            val barList = mutableListOf<BarData>()
+
+            val yBottom = (barWidth * 4.5).toFloat()
+            val barHalfWidth = (barWidth / 2)
+            val yTextBottom = yBottom + 21.dp.toPx() + barHalfWidth
+
+            valueList.forEachIndexed { index, value ->
+                val xCenter = ((barWidth + 7.dp.toPx()) * index) + (barWidth / 2)
+
+                drawCircle(
+                    color = Color(if (selectIndex == index) 0xffff4857 else 0xffececec),
+                    radius = barWidth / 2,
+                    center = Offset(xCenter, yBottom)
+                )
+
+                barList.add(
+                    BarData(
+                        index,
+                        yBottom - barHalfWidth,
+                        yBottom + barHalfWidth,
+                        xCenter - barHalfWidth,
+                        xCenter + barHalfWidth
+                    )
+                )
+
+                if (value != 0) {
+                    drawRect(
+                        color = Color(if (selectIndex == index) 0xffff4857 else 0xffececec),
+                        topLeft = Offset(
+                            xCenter - (barWidth / 2),
+                            (yBottom - (barHalfWidth * value.barGraphMaxValue()))
+                        ),
+                        size = Size(
+                            barWidth,
+                            yBottom - (yBottom - (barHalfWidth * value.barGraphMaxValue()))
+                        )
+                    )
+
+                    drawCircle(
+                        color = Color(if (selectIndex == index) 0xffff4857 else 0xffececec),
+                        radius = barWidth / 2,
+                        center = Offset(
+                            xCenter,
+                            (yBottom - (barHalfWidth * value.barGraphMaxValue()))
+                        )
+                    )
+                }
+
+                barList[index] = barList[index].copy(
+                    top = ((yBottom - (barHalfWidth * value.barGraphMaxValue())) - barHalfWidth)
+                )
+            }
+
+            var index = 0
+            monthlyCount.forEach {
+                drawContext.canvas.nativeCanvas.drawText(
+                    "${it.month}월",
+                    ((barWidth + 7.dp.toPx()) * index) + barHalfWidth,
+                    yTextBottom,
+                    textPaint
+                )
+                index += it.count
+            }
+
+            if (clickOffset.x != 0f) {
+                for (i in barList) {
+                    if (clickOffset.x < i.right && clickOffset.x > i.left && clickOffset.y > i.top && clickOffset.y < i.bottom) {
+                        clickOffset = Offset(0f, 0f)
+                        onClick(i.index)
+                    }
+                }
+            }
+
+            viewHeight = yTextBottom.toDp()
+        }
+    }
+}
+
+fun Int.barGraphMaxValue() = if (this > 7) 7 else this
+
 @Composable
 fun Graph(
     modifier: Modifier,
@@ -211,12 +376,13 @@ fun Graph(
     ySize: Int,
     points: List<GraphPoint>,
     baseLineColor: Color = Color(0xFFF1F1F1),
-    lineColor : Color = Color(0xFFFF4857),
-    dragLineColor : Color = Color(0xFFFF8B95),
-    textColor : Int = android.graphics.Color.parseColor("#FFAAAAAA"),
-    lineTextSize : Int = 11,
-    enableVibrator : Boolean = true,
-    isVisibleXClickLabel : Boolean = false
+    lineColor: Color = Color(0xFFFF4857),
+    dragLineColor: Color = Color(0xFFFF8B95),
+    textColor: Int = android.graphics.Color.parseColor("#FFAAAAAA"),
+    lineTextSize: Int = 11,
+    enableVibrator: Boolean = true,
+    isVisibleXClickLabel: Boolean = false,
+    onVerticalScroll : ((Float) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -261,15 +427,16 @@ fun Graph(
     }
 
     LaunchedEffect(selectPoint) {
-        if (selectPoint.x != 0f && enableVibrator){
+        if (selectPoint.x != 0f && enableVibrator) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 (context.getSystemService(ComponentActivity.VIBRATOR_MANAGER_SERVICE) as VibratorManager).run {
                     defaultVibrator.vibrate(
-                        VibrationEffect.createOneShot(10,70)
+                        VibrationEffect.createOneShot(10, 70)
                     )
                 }
-            }else{
-                val vibrator = context.getSystemService(ComponentActivity.VIBRATOR_SERVICE) as Vibrator
+            } else {
+                val vibrator =
+                    context.getSystemService(ComponentActivity.VIBRATOR_SERVICE) as Vibrator
                 vibrator.vibrate(10)
             }
         }
@@ -292,7 +459,6 @@ fun Graph(
                                 it.x > width - 58.dp.toPx() -> 0f
                                 else -> it.x
                             }
-
                         },
                         onTap = {
                             clickBarOffsetX = 0f
@@ -310,15 +476,16 @@ fun Graph(
                             clickBarOffsetX = 0f
                             selectPoint = SelectPoint()
                         },
-                        onDrag = { change, _ ->
+                        onDrag = { change, dragAmount ->
                             clickBarOffsetX = when {
                                 change.position.x < START_PADDING.dp.toPx() -> START_PADDING.dp.toPx()
                                 change.position.x > width - 58.dp.toPx() -> width - 58.dp.toPx()
                                 else -> change.position.x
                             }
+                            onVerticalScroll?.invoke((dragAmount.y))
                         }
                     )
-                },
+                }
         ) {
             val xAxisSpace =
                 (size.width - START_PADDING.dp.toPx() - 18.dp.toPx()) / (points.size - 1)
@@ -341,7 +508,7 @@ fun Graph(
 
             for (i in yValueList.indices) {
                 drawContext.canvas.nativeCanvas.drawText(
-                    yValueList[i].getYText(),
+                    yValueList[i].toString(),
                     0f,
                     ((size.height - BOTTOM_PADDING.dp.toPx()) - yAxisSpace * (i)) - ((yTextPaint.descent() + yTextPaint.ascent()) / 2),
                     yTextPaint
@@ -397,35 +564,17 @@ fun Graph(
                         else {
                             if (points[i - 1].y == -1) {
                                 lineTo(x, y)
-                                drawPath(
-                                    path = this,
-                                    color = lineColor,
-                                    style = Stroke(
-                                        width = 2.dp.toPx(),
-                                        cap = StrokeCap.Round,
-                                        pathEffect = PathEffect.dashPathEffect(
-                                            intervals = floatArrayOf(4.dp.toPx(), 4.dp.toPx()),
-                                            phase = 4.dp.toPx()
-                                        )
-                                    )
-                                )
+                                drawDottedPath(this, lineColor)
                                 reset()
                                 moveTo(x, y)
                             } else {
                                 lineTo(x, y)
                                 if (i == points.lastIndex) {
-                                    drawPath(
-                                        path = this,
-                                        color = lineColor,
-                                        style = Stroke(
-                                            width = 2.dp.toPx(),
-                                            cap = StrokeCap.Round
-                                        )
-                                    )
+                                    drawNormalPath(this, lineColor)
                                 }
                             }
                         }
-                        pointList.add(SelectPoint(x, y, points[i].y,points[i].x))
+                        pointList.add(SelectPoint(x, y, points[i].y, points[i].x))
                     } else {
                         when (i) {
                             0 -> {
@@ -441,18 +590,7 @@ fun Graph(
                                     ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points.last { it.y != -1 }.y - minYValue)))
                                 )
 
-                                drawPath(
-                                    path = this,
-                                    color = lineColor,
-                                    style = Stroke(
-                                        width = 2.dp.toPx(),
-                                        cap = StrokeCap.Round,
-                                        pathEffect = PathEffect.dashPathEffect(
-                                            intervals = floatArrayOf(4.dp.toPx(), 4.dp.toPx()),
-                                            phase = 4.dp.toPx()
-                                        )
-                                    )
-                                )
+                                drawDottedPath(this, lineColor)
                                 reset()
                             }
 
@@ -463,14 +601,7 @@ fun Graph(
                                     val preY =
                                         ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points[i - 1].y - minYValue)))
 
-                                    drawPath(
-                                        path = this,
-                                        color = lineColor,
-                                        style = Stroke(
-                                            width = 2.dp.toPx(),
-                                            cap = StrokeCap.Round
-                                        )
-                                    )
+                                    drawNormalPath(this, lineColor)
                                     reset()
                                     moveTo(preX, preY)
                                 }
@@ -481,41 +612,18 @@ fun Graph(
             }
 
             for (point in pointList) {
-                drawCircle(
-                    color = lineColor,
-                    radius = 5.dp.toPx(),
-                    center = point.getOffset()
-                )
-
-                drawCircle(
-                    color = Color.White,
-                    radius = 3.dp.toPx(),
-                    center = point.getOffset()
-                )
+                drawPoint(point, lineColor, 5.dp, 3.dp)
             }
 
             if (clickBarOffsetX != 0f) {
                 for (i in pointList.indices) {
                     if (clickBarOffsetX > pointList[i].x - (xAxisSpace / 2) && clickBarOffsetX < pointList[i].x + (xAxisSpace / 2)) {
                         selectPoint = pointList[i]
-                        drawCircle(
-                            color = lineColor,
-                            radius = 7.dp.toPx(),
-                            center = pointList[i].getOffset()
-                        )
-
-                        drawCircle(
-                            color = Color.White,
-                            radius = 4.5.dp.toPx(),
-                            center = pointList[i].getOffset()
-                        )
-
+                        drawPoint(pointList[i], lineColor, 7.dp, 4.5.dp)
                         break
                     } else selectPoint = SelectPoint()
                 }
             }
-
-
         }
 
         if (selectPoint.x != 0f) {
@@ -536,27 +644,10 @@ fun Graph(
                                 )
                             }
                     ) {
-
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFF222222)
-                                )
-                        ) {
-                            Text(
-                                text = if (selectPoint.value > 999) "${selectPoint.value.decimal()}\nkcal" else "${selectPoint.value}kcal",
-                                modifier = Modifier
-                                    .padding(horizontal = 7.dp, vertical = 6.dp)
-                                    .align(Center),
-                                style = TextStyle(
-                                    fontSize = 12.dp.textSp,
-                                    color = Color(0xffffffff),
-                                    fontWeight = FontWeight.W700
-                                ),
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        TextBox(
+                            if (selectPoint.value > 999) "${selectPoint.value.decimal()}\nkcal"
+                            else "${selectPoint.value}kcal"
+                        )
 
                         Image(
                             painter = painterResource(id = R.drawable.polygon),
@@ -574,7 +665,7 @@ fun Graph(
                 layoutHeightOffset = it.height + 11.dpToPixels(context)
             }
 
-            if(isVisibleXClickLabel){
+            if (isVisibleXClickLabel) {
                 var xLabelWidthOffset by remember { mutableStateOf(0f) }
 
                 DimensionSubComposeLayout(
@@ -584,32 +675,12 @@ fun Graph(
                             modifier = Modifier
                                 .offset {
                                     IntOffset(
-                                        (clickBarOffsetX - layoutWidthOffset).roundToInt(),
+                                        (clickBarOffsetX - xLabelWidthOffset).roundToInt(),
                                         188.dp.toPx().roundToInt()
                                     )
                                 }
                         ) {
-
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = Color(0xFF222222)
-                                    )
-                            ) {
-                                Text(
-                                    text = selectPoint.xLabel,
-                                    modifier = Modifier
-                                        .padding(horizontal = 7.dp, vertical = 6.dp)
-                                        .align(Center),
-                                    style = TextStyle(
-                                        fontSize = 12.dp.textSp,
-                                        color = Color(0xffffffff),
-                                        fontWeight = FontWeight.W700
-                                    ),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            TextBox(selectPoint.xLabel)
                         }
                     }
                 ) {
@@ -617,6 +688,31 @@ fun Graph(
                 }
             }
         }
+    }
+}
+
+
+@Composable
+fun TextBox(text: String) {
+    Box(
+        modifier = Modifier
+            .background(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF222222)
+            )
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(horizontal = 6.dp, vertical = 5.dp)
+                .align(Center),
+            style = TextStyle(
+                fontSize = 11.dp.textSp,
+                color = Color(0xffffffff),
+                fontWeight = FontWeight.W700
+            ),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -631,7 +727,7 @@ data class SelectPoint(
     val x: Float = 0f,
     val y: Float = 0f,
     val value: Int = 0,
-    val xLabel : String = ""
+    val xLabel: String = ""
 ) {
     fun getOffset() = Offset(x, y)
 }
@@ -668,4 +764,48 @@ fun Int.dpToPixels(context: Context): Float = TypedValue.applyDimension(
 
 fun Int.decimal() = DecimalFormat("#,###").format(this) ?: ""
 
-fun Int.getYText() = "$this"
+
+fun DrawScope.drawNormalPath(path: Path, lineColor: Color) {
+    drawPath(
+        path = path,
+        color = lineColor,
+        style = Stroke(
+            width = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    )
+}
+
+fun DrawScope.drawDottedPath(path: Path, lineColor: Color) {
+    drawPath(
+        path = path,
+        color = lineColor,
+        style = Stroke(
+            width = 2.dp.toPx(),
+            cap = StrokeCap.Round,
+            pathEffect = PathEffect.dashPathEffect(
+                intervals = floatArrayOf(4.dp.toPx(), 4.dp.toPx()),
+                phase = 4.dp.toPx()
+            )
+        )
+    )
+}
+
+fun DrawScope.drawPoint(
+    point: SelectPoint,
+    lineColor: Color,
+    outRadius: Dp,
+    inRadius: Dp
+) {
+    drawCircle(
+        color = lineColor,
+        radius = outRadius.toPx(),
+        center = point.getOffset()
+    )
+
+    drawCircle(
+        color = Color.White,
+        radius = inRadius.toPx(),
+        center = point.getOffset()
+    )
+}
