@@ -7,6 +7,7 @@ import android.os.*
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,6 +20,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.TopStart
@@ -36,6 +38,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
 import com.example.compose_study.R
 import kotlinx.coroutines.launch
@@ -46,8 +49,9 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 
-const val START_PADDING = 46
-const val BOTTOM_PADDING = 17
+const val START_PADDING = 40
+const val POINT_PADDING = 14
+const val BOTTOM_PADDING = 22
 
 class MainActivity : ComponentActivity() {
 
@@ -182,7 +186,7 @@ class MainActivity : ComponentActivity() {
                     BarGraph(
                         modifier = Modifier.fillMaxWidth(),
                         valueList = listOf(0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3),
-                        selectIndex = state.targetPage,
+                        selectIndex = state.currentPage,
                         monthlyCount = listOf(
                             MonthlyCount(7, 5),
                             MonthlyCount(8, 4),
@@ -190,25 +194,25 @@ class MainActivity : ComponentActivity() {
                         )
                     ) {
                         scope.launch {
-                            state.animateScrollToPage(it)
+                            state.scrollToPage(it)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(70.dp))
 
+
                     Graph(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
+                            .fillMaxWidth(),
                         xSize = if (test) 5 else 7,
-                        ySize = 5,
+                        ySize = 3,
                         points = if (test) {
                             if (test2) list30 else list30_2
                         } else {
                             if (test2) list7 else list7_2
                         },
                         isVisibleXClickLabel = test
-                    ){
+                    ) {
                         scope.launch {
                             scrollState.scrollBy(-it)
                         }
@@ -358,6 +362,7 @@ fun BarGraph(
                     if (clickOffset.x < i.right && clickOffset.x > i.left && clickOffset.y > i.top && clickOffset.y < i.bottom) {
                         clickOffset = Offset(0f, 0f)
                         onClick(i.index)
+                        break
                     }
                 }
             }
@@ -378,11 +383,11 @@ fun Graph(
     baseLineColor: Color = Color(0xFFF1F1F1),
     lineColor: Color = Color(0xFFFF4857),
     dragLineColor: Color = Color(0xFFFF8B95),
-    textColor: Int = android.graphics.Color.parseColor("#FFAAAAAA"),
+    textColor: Int = android.graphics.Color.parseColor("#FF777777"),
     lineTextSize: Int = 11,
     enableVibrator: Boolean = true,
     isVisibleXClickLabel: Boolean = false,
-    onVerticalScroll : ((Float) -> Unit)? = null
+    onVerticalScroll: ((Float) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -444,19 +449,29 @@ fun Graph(
 
     Box(
         modifier = modifier
+            .height(198.dp)
             .background(Color.White)
             .padding(horizontal = 20.dp),
         contentAlignment = Center
     ) {
+        Text(
+            text = "kcal", modifier = Modifier.align(TopStart), style = TextStyle(
+                fontSize = 11.dp.textSp,
+                fontWeight = FontWeight.W400,
+                color = Color(0xff777777)
+            )
+        )
         Canvas(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .height(170.dp)
+                .align(BottomCenter)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
                             clickBarOffsetX = when {
-                                it.x < START_PADDING.dp.toPx() -> 0f
-                                it.x > width - 58.dp.toPx() -> 0f
+                                it.x < (START_PADDING + POINT_PADDING).dp.toPx() -> 0f
+                                it.x > width - 54.dp.toPx() -> 0f
                                 else -> it.x
                             }
                         },
@@ -478,8 +493,8 @@ fun Graph(
                         },
                         onDrag = { change, dragAmount ->
                             clickBarOffsetX = when {
-                                change.position.x < START_PADDING.dp.toPx() -> START_PADDING.dp.toPx()
-                                change.position.x > width - 58.dp.toPx() -> width - 58.dp.toPx()
+                                change.position.x < (START_PADDING + POINT_PADDING).dp.toPx() -> (START_PADDING + POINT_PADDING).dp.toPx()
+                                change.position.x > width - 54.dp.toPx() -> width - 54.dp.toPx()
                                 else -> change.position.x
                             }
                             onVerticalScroll?.invoke((dragAmount.y))
@@ -487,8 +502,7 @@ fun Graph(
                     )
                 }
         ) {
-            val xAxisSpace =
-                (size.width - START_PADDING.dp.toPx() - 18.dp.toPx()) / (points.size - 1)
+            val xAxisSpace = (size.width - START_PADDING.dp.toPx() - (POINT_PADDING*2).dp.toPx()) / (points.size - 1)
             val yAxisSpace = (size.height - BOTTOM_PADDING.dp.toPx()) / (ySize - 1)
 
             val valueToPx = (size.height - BOTTOM_PADDING.dp.toPx()) / yRange
@@ -499,7 +513,7 @@ fun Graph(
             for (i in points.indices step xValueSpace) {
                 drawContext.canvas.nativeCanvas.drawText(
                     points[i].x,
-                    (xAxisSpace * i) + START_PADDING.dp.toPx(),
+                    (xAxisSpace * i) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
                     size.height,
                     xTextPaint
                 )
@@ -508,7 +522,7 @@ fun Graph(
 
             for (i in yValueList.indices) {
                 drawContext.canvas.nativeCanvas.drawText(
-                    yValueList[i].toString(),
+                    yValueList[i].decimal(),
                     0f,
                     ((size.height - BOTTOM_PADDING.dp.toPx()) - yAxisSpace * (i)) - ((yTextPaint.descent() + yTextPaint.ascent()) / 2),
                     yTextPaint
@@ -516,7 +530,7 @@ fun Graph(
 
                 drawLine(
                     start = Offset(
-                        x = START_PADDING.dp.toPx() - 11.dp.toPx(),
+                        x = START_PADDING.dp.toPx(),
                         y = (size.height - BOTTOM_PADDING.dp.toPx()) - yAxisSpace * (i)
                     ),
                     end = Offset(
@@ -556,7 +570,7 @@ fun Graph(
                 reset()
                 for (i in points.indices) {
                     if (points[i].y != -1) {
-                        val x = (xAxisSpace * points[i].index) + START_PADDING.dp.toPx()
+                        val x = (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
                         val y =
                             ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points[i].y - minYValue)))
 
@@ -574,19 +588,27 @@ fun Graph(
                                 }
                             }
                         }
-                        pointList.add(SelectPoint(x, y, points[i].y, points[i].x))
+                        pointList.add(
+                            SelectPoint(
+                                x,
+                                y,
+                                points[i].y,
+                                points[i].x,
+                                i == 0 || i == points.lastIndex
+                            )
+                        )
                     } else {
                         when (i) {
                             0 -> {
                                 moveTo(
-                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx(),
+                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
                                     ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points.first { it.y != -1 }.y - minYValue)))
                                 )
                             }
 
                             points.lastIndex -> {
                                 lineTo(
-                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx(),
+                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
                                     ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points.last { it.y != -1 }.y - minYValue)))
                                 )
 
@@ -597,7 +619,7 @@ fun Graph(
                             else -> {
                                 if (points[i - 1].y != -1) {
                                     val preX =
-                                        (xAxisSpace * points[i - 1].index) + START_PADDING.dp.toPx()
+                                        (xAxisSpace * points[i - 1].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
                                     val preY =
                                         ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points[i - 1].y - minYValue)))
 
@@ -640,13 +662,13 @@ fun Graph(
                             .offset {
                                 IntOffset(
                                     (selectPoint.x - layoutWidthOffset).roundToInt(),
-                                    (selectPoint.y - layoutHeightOffset).roundToInt()
+                                    (selectPoint.y - layoutHeightOffset + 28.dp.toPx()).roundToInt()
                                 )
                             }
                     ) {
                         TextBox(
-                            if (selectPoint.value > 999) "${selectPoint.value.decimal()}\nkcal"
-                            else "${selectPoint.value}kcal"
+                            if (selectPoint.isBothEnds) "${selectPoint.value.decimal()}\nkcal"
+                            else "${selectPoint.value.decimal()}kcal"
                         )
 
                         Image(
@@ -704,10 +726,10 @@ fun TextBox(text: String) {
         Text(
             text = text,
             modifier = Modifier
-                .padding(horizontal = 6.dp, vertical = 5.dp)
+                .padding(horizontal = 7.dp, vertical = 6.dp)
                 .align(Center),
             style = TextStyle(
-                fontSize = 11.dp.textSp,
+                fontSize = 12.dp.textSp,
                 color = Color(0xffffffff),
                 fontWeight = FontWeight.W700
             ),
@@ -727,7 +749,8 @@ data class SelectPoint(
     val x: Float = 0f,
     val y: Float = 0f,
     val value: Int = 0,
-    val xLabel: String = ""
+    val xLabel: String = "",
+    val isBothEnds: Boolean = false
 ) {
     fun getOffset() = Offset(x, y)
 }
