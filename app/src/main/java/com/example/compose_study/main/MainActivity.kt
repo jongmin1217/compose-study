@@ -3,7 +3,9 @@ package com.example.compose_study.main
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.os.*
+import android.util.Log
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,7 +22,9 @@ import androidx.compose.material.Button
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomCenter
+import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.TopStart
@@ -41,8 +45,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
 import com.example.compose_study.R
+import com.example.compose_study.ui.theme.Font
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.pow
@@ -89,29 +97,29 @@ class MainActivity : ComponentActivity() {
     )
 
     val list7_2 = listOf(
-        GraphPoint(0, "09-01", -1),
-        GraphPoint(1, "09-02", 234),
-        GraphPoint(2, "09-03", 61),
-        GraphPoint(3, "09-04", 24),
-        GraphPoint(4, "09-05", -1),
-        GraphPoint(5, "09-06", 123),
-        GraphPoint(6, "09-07", 111)
+        GraphPoint(0, "09-01", null),
+        GraphPoint(1, "09-02", 500),
+        GraphPoint(2, "09-03", null),
+        GraphPoint(3, "09-04", null),
+        GraphPoint(4, "09-05", null),
+        GraphPoint(5, "09-06", null),
+        GraphPoint(6, "09-07", null)
     )
 
     val list30_2 = listOf(
-        GraphPoint(0, "09-01", -1),
+        GraphPoint(0, "09-01", null),
         GraphPoint(1, "09-02", 37),
         GraphPoint(2, "09-03", 22),
-        GraphPoint(3, "09-04", -1),
-        GraphPoint(4, "09-05", -1),
-        GraphPoint(5, "09-06", -1),
+        GraphPoint(3, "09-04", null),
+        GraphPoint(4, "09-05", null),
+        GraphPoint(5, "09-06", null),
         GraphPoint(6, "09-07", 25),
-        GraphPoint(7, "09-08", -1),
+        GraphPoint(7, "09-08", null),
         GraphPoint(8, "09-09", 50),
         GraphPoint(9, "09-10", 70),
         GraphPoint(10, "09-11", 25),
         GraphPoint(11, "09-12", 37),
-        GraphPoint(12, "09-13", -1),
+        GraphPoint(12, "09-13", null),
         GraphPoint(13, "09-14", 24),
         GraphPoint(14, "09-15", 50),
         GraphPoint(15, "09-16", 13),
@@ -121,25 +129,69 @@ class MainActivity : ComponentActivity() {
         GraphPoint(19, "09-20", 70),
         GraphPoint(20, "09-21", 25),
         GraphPoint(21, "09-22", 37),
-        GraphPoint(22, "09-23", -1),
+        GraphPoint(22, "09-23", null),
         GraphPoint(23, "09-24", 24),
         GraphPoint(24, "09-25", 50),
         GraphPoint(25, "09-26", 51),
         GraphPoint(26, "09-27", 25),
         GraphPoint(27, "09-28", 24),
-        GraphPoint(28, "09-29", -1),
+        GraphPoint(28, "09-29", null),
         GraphPoint(29, "09-30", 24)
     )
 
     val list7 = listOf(
-        GraphPoint(0, "09-01", 30),
-        GraphPoint(1, "09-02", 37),
-        GraphPoint(2, "09-03", 120),
-        GraphPoint(3, "09-04", 20),
-        GraphPoint(4, "09-05", 50),
-        GraphPoint(5, "09-06", 65),
-        GraphPoint(6, "09-07", 25)
+        GraphPoint(0, "09-13", 30),
+        GraphPoint(1, "09-14", 37),
+        GraphPoint(2, "09-15", 120),
+        GraphPoint(3, "09-16", 20),
+        GraphPoint(4, "09-17", 50),
+        GraphPoint(5, "09-18", 65),
+        GraphPoint(6, "09-19", 25)
     )
+
+    val list7_3 = listOf(
+        GraphPoint(0, "09-01", null),
+        GraphPoint(1, "09-02", null),
+        GraphPoint(2, "09-03", null),
+        GraphPoint(3, "09-04", null),
+        GraphPoint(4, "09-05", null),
+        GraphPoint(5, "09-06", null),
+        GraphPoint(6, "09-07", null)
+    )
+
+    val list30_3 = listOf(
+        GraphPoint(0, "09-01", null),
+        GraphPoint(1, "09-02", null),
+        GraphPoint(2, "09-03", null),
+        GraphPoint(3, "09-04", null),
+        GraphPoint(4, "09-05", null),
+        GraphPoint(5, "09-06", null),
+        GraphPoint(6, "09-07", null),
+        GraphPoint(7, "09-08", null),
+        GraphPoint(8, "09-09", null),
+        GraphPoint(9, "09-10", null),
+        GraphPoint(10, "09-11", null),
+        GraphPoint(11, "09-12", null),
+        GraphPoint(12, "09-13", null),
+        GraphPoint(13, "09-14", null),
+        GraphPoint(14, "09-15", null),
+        GraphPoint(15, "09-16", null),
+        GraphPoint(16, "09-17", null),
+        GraphPoint(17, "09-18", null),
+        GraphPoint(18, "09-19", null),
+        GraphPoint(19, "09-20", null),
+        GraphPoint(20, "09-21", null),
+        GraphPoint(21, "09-22", null),
+        GraphPoint(22, "09-23", null),
+        GraphPoint(23, "09-24", null),
+        GraphPoint(24, "09-25", null),
+        GraphPoint(25, "09-26", null),
+        GraphPoint(26, "09-27", null),
+        GraphPoint(27, "09-28", null),
+        GraphPoint(28, "09-29", null),
+        GraphPoint(29, "09-30", null)
+    )
+
 
     @OptIn(ExperimentalFoundationApi::class)
     @SuppressLint("NewApi")
@@ -153,7 +205,7 @@ class MainActivity : ComponentActivity() {
             val scrollState = rememberScrollState()
 
             var test by remember { mutableStateOf(false) }
-            var test2 by remember { mutableStateOf(false) }
+            var type by remember { mutableStateOf(0) }
 
 
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -207,9 +259,17 @@ class MainActivity : ComponentActivity() {
                         xSize = if (test) 5 else 7,
                         ySize = 3,
                         points = if (test) {
-                            if (test2) list30 else list30_2
+                            when(type){
+                                0 -> list30
+                                1 -> list30_2
+                                else -> list30_3
+                            }
                         } else {
-                            if (test2) list7 else list7_2
+                            when(type){
+                                0 -> list7
+                                1 -> list7_2
+                                else -> list7_3
+                            }
                         },
                         isVisibleXClickLabel = test
                     ) {
@@ -224,10 +284,14 @@ class MainActivity : ComponentActivity() {
                             Text(text = "월/주")
                         }
 
-                        Spacer(modifier = Modifier.width(50.dp))
+                        Spacer(modifier = Modifier.width(30.dp))
 
-                        Button(onClick = { test2 = !test2 }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "데이터 on/off")
+                        Button(onClick = { type-- }, modifier = Modifier.height(50.dp)) {
+                            Text(text = "-")
+                        }
+
+                        Button(onClick = { type++ }, modifier = Modifier.height(50.dp)) {
+                            Text(text = "+")
                         }
                     }
 
@@ -375,6 +439,27 @@ fun BarGraph(
 fun Int.barGraphMaxValue() = if (this > 7) 7 else this
 
 @Composable
+fun baseTextPaint(
+    lineTextSize : Int,
+    textColor: Int,
+    align : Paint.Align,
+    density : Density,
+    context: Context,
+    typeFace : Int
+) = remember(density) {
+    Paint().apply {
+        color = textColor
+        textAlign = align
+        textSize = density.run { lineTextSize.dp.toPx() }
+        isAntiAlias = true
+        Typeface.createFromAsset(context.resources.assets, "nanum_square_round.ttf").run {
+            typeface = Typeface.create(this,typeFace)
+        }
+    }
+}
+
+@SuppressLint("SimpleDateFormat")
+@Composable
 fun Graph(
     modifier: Modifier,
     xSize: Int,
@@ -394,33 +479,23 @@ fun Graph(
     val configuration = LocalConfiguration.current
     val width = configuration.screenWidthDp.dpToPixels(context)
 
+    val isEmptyList = points.find { it.y != null } == null
 
-    val xTextPaint = remember(density) {
-        Paint().apply {
-            color = textColor
-            textAlign = Paint.Align.CENTER
-            textSize = density.run { lineTextSize.dp.toPx() }
-        }
-    }
-
-    val yTextPaint = remember(density) {
-        Paint().apply {
-            color = textColor
-            textAlign = Paint.Align.LEFT
-            textSize = density.run { lineTextSize.dp.toPx() }
-        }
-    }
+    val xTextPaint = baseTextPaint(lineTextSize, textColor, Paint.Align.CENTER, density,context,Typeface.NORMAL)
+    val xTodayTextPaint = baseTextPaint(lineTextSize, android.graphics.Color.parseColor("#FFFF4857"), Paint.Align.CENTER, density,context,Typeface.BOLD)
+    val yTextPaint = baseTextPaint(lineTextSize, textColor, Paint.Align.LEFT, density,context,Typeface.NORMAL)
+    val emptyTextPaint = baseTextPaint(13, android.graphics.Color.parseColor("#FF999999"), Paint.Align.CENTER, density,context,Typeface.NORMAL)
 
     var clickBarOffsetX by remember { mutableStateOf(0f) }
     var selectPoint by remember {
         mutableStateOf(SelectPoint())
     }
 
-    val maxValue = points.maxOfOrNull { it.y } ?: 0
-    val minValue = points.filter { it.y != -1 }.minOfOrNull { it.y } ?: 0
+    val maxValue = points.maxOfOrNull { it.y?:0 } ?: 0
+    val minValue = points.filter { it.y != null }.minOfOrNull { it.y?:0 } ?: 0
 
-    val maxYValue = maxValue.getCeil()
-    val minYValue = minValue.getFloor()
+    val maxYValue = if(maxValue.getCeil() == minValue.getFloor()) maxValue * 2 else maxValue.getCeil()
+    val minYValue = if(maxValue.getCeil() == minValue.getFloor()) 0 else minValue.getFloor()
 
     val yRange = maxYValue - minYValue
 
@@ -455,10 +530,15 @@ fun Graph(
         contentAlignment = Center
     ) {
         Text(
-            text = "kcal", modifier = Modifier.align(TopStart), style = TextStyle(
+            text = "kcal",
+            modifier = Modifier
+                .align(if(isEmptyList) BottomStart else TopStart)
+                .padding(bottom = if(isEmptyList) 40.dp else 0.dp),
+            style = TextStyle(
                 fontSize = 11.dp.textSp,
                 fontWeight = FontWeight.W400,
-                color = Color(0xff777777)
+                color = Color(0xff777777),
+                fontFamily = Font.nanumSquareRoundFont
             )
         )
         Canvas(
@@ -511,13 +591,13 @@ fun Graph(
 
 
             for (i in points.indices step xValueSpace) {
+                val isToday = SimpleDateFormat("MM-dd").format(System.currentTimeMillis()) == points[i].x
                 drawContext.canvas.nativeCanvas.drawText(
-                    points[i].x,
+                    if(isToday) "오늘" else points[i].x,
                     (xAxisSpace * i) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
                     size.height,
-                    xTextPaint
+                    if(isToday) xTodayTextPaint else xTextPaint
                 )
-
             }
 
             for (i in yValueList.indices) {
@@ -541,118 +621,186 @@ fun Graph(
                     strokeWidth = 1.dp.toPx()
                 )
 
+                if(isEmptyList) break
             }
 
-            if (clickBarOffsetX != 0f) {
-                drawLine(
-                    color = dragLineColor,
-                    start = Offset(
-                        clickBarOffsetX,
-                        0f
-                    ),
-                    end = Offset(
-                        clickBarOffsetX,
-                        size.height - BOTTOM_PADDING.dp.toPx()
-                    ),
-                    pathEffect = PathEffect.dashPathEffect(
-                        intervals = floatArrayOf(
-                            2.dp.toPx(),
-                            2.dp.toPx()
-                        ), phase = 2.dp.toPx()
-                    ),
-                    strokeWidth = 1.dp.toPx()
+            if(isEmptyList){
+                drawContext.canvas.nativeCanvas.drawText(
+                    "식사를 기록해 주세요.",
+                    size.width/2,
+                    size.height - 105.dp.toPx(),
+                    emptyTextPaint
                 )
-            }
+            }else{
+                if (clickBarOffsetX != 0f) {
+                    drawLine(
+                        color = dragLineColor,
+                        start = Offset(
+                            clickBarOffsetX,
+                            0f
+                        ),
+                        end = Offset(
+                            clickBarOffsetX,
+                            size.height - BOTTOM_PADDING.dp.toPx()
+                        ),
+                        pathEffect = PathEffect.dashPathEffect(
+                            intervals = floatArrayOf(
+                                2.dp.toPx(),
+                                2.dp.toPx()
+                            ), phase = 2.dp.toPx()
+                        ),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
 
-            val pointList = mutableListOf<SelectPoint>()
+                val pointList = mutableListOf<SelectPoint>()
 
-            Path().run {
-                reset()
-                for (i in points.indices) {
-                    if (points[i].y != -1) {
-                        val x = (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
-                        val y =
-                            ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points[i].y - minYValue)))
+                Path().run {
+                    reset()
+                    for (i in points.indices) {
+                        points[i].y?.let { yValue ->
+                            val x = (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
+                            val y =
+                                ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (yValue - minYValue)))
 
-                        if (i == 0) moveTo(x, y)
-                        else {
-                            if (points[i - 1].y == -1) {
-                                lineTo(x, y)
-                                drawDottedPath(this, lineColor)
-                                reset()
-                                moveTo(x, y)
-                            } else {
-                                lineTo(x, y)
-                                if (i == points.lastIndex) {
-                                    drawNormalPath(this, lineColor)
+                            if (i == 0) moveTo(x, y)
+                            else {
+                                if (points[i - 1].y == null) {
+                                    lineTo(x, y)
+                                    drawDottedPath(this, lineColor)
+                                    reset()
+                                    moveTo(x, y)
+                                } else {
+                                    lineTo(x, y)
+                                    if (i == points.lastIndex) {
+                                        drawNormalPath(this, lineColor)
+                                    }
                                 }
                             }
-                        }
-                        pointList.add(
-                            SelectPoint(
-                                x,
-                                y,
-                                points[i].y,
-                                points[i].x,
-                                i == 0 || i == points.lastIndex
+                            pointList.add(
+                                SelectPoint(
+                                    x,
+                                    y,
+                                    yValue,
+                                    points[i].x,
+                                    i == 0 || i == points.lastIndex
+                                )
                             )
-                        )
-                    } else {
-                        when (i) {
-                            0 -> {
-                                moveTo(
-                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
-                                    ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points.first { it.y != -1 }.y - minYValue)))
-                                )
-                            }
+                        }?:run{
+                            when (i) {
+                                0 -> {
+                                    points.first { it.y != null }.y?.let { firstYValue ->
+                                        moveTo(
+                                            (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
+                                            ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (firstYValue - minYValue)))
+                                        )
+                                    }
+                                }
 
-                            points.lastIndex -> {
-                                lineTo(
-                                    (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
-                                    ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points.last { it.y != -1 }.y - minYValue)))
-                                )
+                                points.lastIndex -> {
+                                    points.last { it.y != null }.y?.let { lastYValue ->
+                                        lineTo(
+                                            (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
+                                            ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (lastYValue - minYValue)))
+                                        )
 
-                                drawDottedPath(this, lineColor)
-                                reset()
-                            }
+                                        drawDottedPath(this, lineColor)
+                                        reset()
+                                    }
+                                }
 
-                            else -> {
-                                if (points[i - 1].y != -1) {
-                                    val preX =
-                                        (xAxisSpace * points[i - 1].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
-                                    val preY =
-                                        ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (points[i - 1].y - minYValue)))
+                                else -> {
+                                    points[i - 1].y?.let { preYValue ->
+                                        val preX =
+                                            (xAxisSpace * points[i - 1].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
+                                        val preY =
+                                            ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (preYValue - minYValue)))
 
-                                    drawNormalPath(this, lineColor)
-                                    reset()
-                                    moveTo(preX, preY)
+                                        drawNormalPath(this, lineColor)
+                                        reset()
+                                        moveTo(preX, preY)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            for (point in pointList) {
-                drawPoint(point, lineColor, 5.dp, 3.dp)
-            }
+                for (point in pointList) {
+                    drawPoint(point, lineColor, 5.dp, 3.dp)
+                }
 
-            if (clickBarOffsetX != 0f) {
-                for (i in pointList.indices) {
-                    if (clickBarOffsetX > pointList[i].x - (xAxisSpace / 2) && clickBarOffsetX < pointList[i].x + (xAxisSpace / 2)) {
-                        selectPoint = pointList[i]
-                        drawPoint(pointList[i], lineColor, 7.dp, 4.5.dp)
-                        break
-                    } else selectPoint = SelectPoint()
+                if (clickBarOffsetX != 0f) {
+                    for (i in pointList.indices) {
+                        if (clickBarOffsetX > pointList[i].x - (xAxisSpace / 2) && clickBarOffsetX < pointList[i].x + (xAxisSpace / 2)) {
+                            selectPoint = pointList[i]
+                            drawPoint(pointList[i], lineColor, 7.dp, 4.5.dp)
+                            break
+                        } else selectPoint = SelectPoint()
+                    }
                 }
             }
         }
 
         if (selectPoint.x != 0f) {
+            SpeechBubble(
+                selectPoint,
+                this,
+                context,
+                isVisibleXClickLabel,
+                clickBarOffsetX
+            )
+        }
+    }
+}
 
-            var layoutWidthOffset by remember { mutableStateOf(0f) }
-            var layoutHeightOffset by remember { mutableStateOf(0f) }
+@Composable
+fun SpeechBubble(
+    selectPoint: SelectPoint,
+    boxScope: BoxScope,
+    context: Context,
+    isVisibleXClickLabel : Boolean,
+    clickBarOffsetX : Float
+){
+    var layoutWidthOffset by remember { mutableStateOf(0f) }
+    var layoutHeightOffset by remember { mutableStateOf(0f) }
 
+    boxScope.run {
+        DimensionSubComposeLayout(
+            modifier = Modifier.align(TopStart),
+            mainContent = {
+                Column(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (selectPoint.x - layoutWidthOffset).roundToInt(),
+                                (selectPoint.y - layoutHeightOffset + 28.dp.toPx()).roundToInt()
+                            )
+                        }
+                ) {
+                    TextBox(
+                        if (selectPoint.isBothEnds) "${selectPoint.value.decimal()}\nkcal"
+                        else "${selectPoint.value.decimal()}kcal"
+                    )
+
+                    Image(
+                        painter = painterResource(id = R.drawable.polygon),
+                        contentDescription = "",
+                        modifier = Modifier
+                            .width(8.dp)
+                            .height(5.dp)
+                            .align(CenterHorizontally)
+                            .padding(bottom = 1.dp)
+                    )
+                }
+            }
+        ) {
+            layoutWidthOffset = it.width / 2
+            layoutHeightOffset = it.height + 11.dpToPixels(context)
+        }
+
+        if (isVisibleXClickLabel) {
+            var xLabelWidthOffset by remember { mutableStateOf(0f) }
 
             DimensionSubComposeLayout(
                 modifier = Modifier.align(TopStart),
@@ -661,56 +809,20 @@ fun Graph(
                         modifier = Modifier
                             .offset {
                                 IntOffset(
-                                    (selectPoint.x - layoutWidthOffset).roundToInt(),
-                                    (selectPoint.y - layoutHeightOffset + 28.dp.toPx()).roundToInt()
+                                    (clickBarOffsetX - xLabelWidthOffset).roundToInt(),
+                                    188.dp.toPx().roundToInt()
                                 )
                             }
                     ) {
-                        TextBox(
-                            if (selectPoint.isBothEnds) "${selectPoint.value.decimal()}\nkcal"
-                            else "${selectPoint.value.decimal()}kcal"
-                        )
-
-                        Image(
-                            painter = painterResource(id = R.drawable.polygon),
-                            contentDescription = "",
-                            modifier = Modifier
-                                .width(8.dp)
-                                .height(5.dp)
-                                .align(CenterHorizontally)
-                                .padding(bottom = 1.dp)
-                        )
+                        TextBox(selectPoint.xLabel)
                     }
                 }
             ) {
-                layoutWidthOffset = it.width / 2
-                layoutHeightOffset = it.height + 11.dpToPixels(context)
-            }
-
-            if (isVisibleXClickLabel) {
-                var xLabelWidthOffset by remember { mutableStateOf(0f) }
-
-                DimensionSubComposeLayout(
-                    modifier = Modifier.align(TopStart),
-                    mainContent = {
-                        Column(
-                            modifier = Modifier
-                                .offset {
-                                    IntOffset(
-                                        (clickBarOffsetX - xLabelWidthOffset).roundToInt(),
-                                        188.dp.toPx().roundToInt()
-                                    )
-                                }
-                        ) {
-                            TextBox(selectPoint.xLabel)
-                        }
-                    }
-                ) {
-                    xLabelWidthOffset = it.width / 2
-                }
+                xLabelWidthOffset = it.width / 2
             }
         }
     }
+
 }
 
 
@@ -731,7 +843,8 @@ fun TextBox(text: String) {
             style = TextStyle(
                 fontSize = 12.dp.textSp,
                 color = Color(0xffffffff),
-                fontWeight = FontWeight.W700
+                fontWeight = FontWeight.W700,
+                fontFamily = Font.nanumSquareRoundFont
             ),
             textAlign = TextAlign.Center
         )
@@ -742,7 +855,7 @@ fun TextBox(text: String) {
 data class GraphPoint(
     val index: Int,
     val x: String,
-    val y: Int
+    val y: Int?
 )
 
 data class SelectPoint(
