@@ -115,4 +115,6 @@ dependencies {
     implementation(Libs.compose_viewmodel)
     // Optional - Integration with LiveData
     implementation(Libs.compose_livedata)
+
+    implementation(Libs.onebone)
 }

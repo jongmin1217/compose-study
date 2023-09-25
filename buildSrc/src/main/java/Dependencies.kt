@@ -53,6 +53,8 @@ object Versions{
 
     const val compose = "1.2.0"
 
+    const val onebone = "2.3.5"
+
 }
 
 object Libs{
@@ -129,6 +131,8 @@ object Libs{
     const val compose_viewmodel = "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.compose_lifecycle}"
     // Optional - Integration with LiveData
     const val compose_livedata = "androidx.compose.runtime:runtime-livedata"
+
+    const val onebone = "me.onebone:toolbar-compose:${Versions.onebone}"
 }
 
 object TestLibs{

@@ -3,58 +3,79 @@ package com.example.compose_study.main
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.*
 import android.util.Log
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Tab
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.Center
+import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
+import androidx.compose.ui.Alignment.Companion.CenterStart
+import androidx.compose.ui.Alignment.Companion.Start
 import androidx.compose.ui.Alignment.Companion.TopStart
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.zIndex
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
 import kotlinx.coroutines.launch
+import me.onebone.toolbar.CollapsingToolbarScaffold
+import me.onebone.toolbar.ScrollStrategy
+import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.pow
-import kotlin.math.roundToInt
+import kotlin.math.*
 
 
 const val START_PADDING = 40
@@ -209,94 +230,370 @@ class MainActivity : ComponentActivity() {
 
 
             Surface(modifier = Modifier.fillMaxSize()) {
+                //ScrollTest()
+                PagerTest()
+//                Column(
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                        .verticalScroll(scrollState)
+//                ) {
+//                    HorizontalPager(
+//                        pageCount = 12,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .height(200.dp)
+//                            .background(Color(0xffbbbbbb)),
+//                        state = state
+//                    ) {
+//                        Box(
+//                            modifier = Modifier.fillMaxSize()
+//                        ) {
+//                            Text(
+//                                text = "${it + 1}",
+//                                modifier = Modifier.align(Center),
+//                                style = TextStyle(fontSize = 20.dp.textSp)
+//                            )
+//                        }
+//                    }
+//
+//                    Spacer(modifier = Modifier.height(30.dp))
+//
+//                    BarGraph(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        valueList = listOf(0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3),
+//                        selectIndex = state.currentPage,
+//                        monthlyCount = listOf(
+//                            MonthlyCount(7, 5),
+//                            MonthlyCount(8, 4),
+//                            MonthlyCount(9, 3)
+//                        )
+//                    ) {
+//                        scope.launch {
+//                            state.scrollToPage(it)
+//                        }
+//                    }
+//
+//                    Spacer(modifier = Modifier.height(70.dp))
+//
+//
+//                    Graph(
+//                        modifier = Modifier
+//                            .fillMaxWidth(),
+//                        xSize = if (test) 5 else 7,
+//                        ySize = 3,
+//                        points = if (test) {
+//                            when(type){
+//                                0 -> list30
+//                                1 -> list30_2
+//                                else -> list30_3
+//                            }
+//                        } else {
+//                            when(type){
+//                                0 -> list7
+//                                1 -> list7_2
+//                                else -> list7_3
+//                            }
+//                        },
+//                        isVisibleXClickLabel = test
+//                    ) {
+//                        scope.launch {
+//                            scrollState.scrollBy(-it)
+//                        }
+//                    }
+//
+//                    Spacer(modifier = Modifier.height(50.dp))
+//                    Row(modifier = Modifier.height(50.dp)) {
+//                        Button(onClick = { test = !test }, modifier = Modifier.height(50.dp)) {
+//                            Text(text = "월/주")
+//                        }
+//
+//                        Spacer(modifier = Modifier.width(30.dp))
+//
+//                        Button(onClick = { type-- }, modifier = Modifier.height(50.dp)) {
+//                            Text(text = "-")
+//                        }
+//
+//                        Button(onClick = { type++ }, modifier = Modifier.height(50.dp)) {
+//                            Text(text = "+")
+//                        }
+//                    }
+//
+//                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@Composable
+fun PagerTest(){
+    val scope = rememberCoroutineScope()
+    val state = rememberPagerState(initialPage = 500)
+
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        HorizontalPager(
+            pageCount = 1000,
+            state = state,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            val page = it % 7
+            val image = painterResource(
+                id = when(page){
+                    0 -> R.drawable.image_1
+                    1 -> R.drawable.image_2
+                    2 -> R.drawable.image_3
+                    3 -> R.drawable.image_4
+                    4 -> R.drawable.image_5
+                    5 -> R.drawable.image_6
+                    else -> R.drawable.image_7
+                }
+            )
+
+            Image(
+                painter = image,
+                contentDescription = "",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)
+                    .graphicsLayer {
+                        val pageOffset = state.offsetForPage(it)
+                        translationX = size.width * pageOffset
+
+                        val endOffset = state.endOffsetForPage(it)
+
+                        shape = RectPath(progress = 1f - endOffset.absoluteValue)
+                        clip = true
+
+                    }
+                ,
+                contentScale = ContentScale.Companion.Crop
+            )
+        }
+
+        Spacer(modifier = Modifier.height(50.dp))
+
+        Row {
+            Button(onClick = {
+                scope.launch {
+                    state.animateScrollToPage(state.currentPage - 1)
+                }
+            }) {
+                Text(text = "-")
+            }
+
+            Button(onClick = {
+                scope.launch {
+                    state.animateScrollToPage(state.currentPage + 1)
+                }
+            }) {
+                Text(text = "+")
+            }
+        }
+    }
+
+}
+
+class RectPath(private val progress: Float) : Shape {
+    override fun createOutline(
+        size: Size, layoutDirection: LayoutDirection, density: Density
+    ): Outline {
+        return Outline.Generic(Path().apply {
+            addRect(
+                Rect(
+                    size.width - (size.width * progress),0f,size.width,size.height
+                )
+            )
+        })
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+fun PagerState.calculateCurrentOffsetForPage(page: Int): Float {
+    return (currentPage - page) + currentPageOffsetFraction
+}
+@OptIn(ExperimentalFoundationApi::class)
+fun PagerState.offsetForPage(page: Int) = (currentPage - page) + currentPageOffsetFraction
+
+@OptIn(ExperimentalFoundationApi::class)
+fun PagerState.startOffsetForPage(page: Int): Float {
+    return offsetForPage(page).coerceAtLeast(0f)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+fun PagerState.endOffsetForPage(page: Int): Float {
+    return offsetForPage(page).coerceAtMost(0f)
+}
+
+@Composable
+fun ScrollTest() {
+    val collapsingToolbarScaffoldState = rememberCollapsingToolbarScaffoldState()
+    val offsetY = collapsingToolbarScaffoldState.offsetY
+    val progress = collapsingToolbarScaffoldState.toolbarState.progress
+
+    var isVisibleBtn by remember{ mutableStateOf(true) }
+
+    LaunchedEffect(progress){
+        isVisibleBtn = progress > 0.9f
+    }
+
+    val tabTitles = listOf("식사", "산책")
+    var tabIndex by rememberSaveable { mutableStateOf(0) }
+
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        CollapsingToolbarScaffold(
+            modifier = Modifier
+                .fillMaxSize(),
+            state = collapsingToolbarScaffoldState,
+            scrollStrategy = ScrollStrategy.ExitUntilCollapsed,
+            toolbarModifier = Modifier.verticalScroll(rememberScrollState()),
+            toolbar = {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(168.dp)
+                        .parallax(1f)
+                )
+
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
+                        .fillMaxWidth()
+                        .road(
+                            whenCollapsed = Center,
+                            whenExpanded = BottomCenter
+                        )
                 ) {
-                    HorizontalPager(
-                        pageCount = 12,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
-                            .background(Color(0xffbbbbbb)),
-                        state = state
+                            .height((54 + (60 - 54) * progress).dp)
+                            .padding(horizontal = 20.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize()
+                        Text(
+                            text = "12월 25일 - 12월 31일",
+                            style = TextStyle(
+                                fontSize = (15 + (24 - 15) * progress).dp.textSp
+                            ),
+                            modifier = Modifier.align(Center)
+                        )
+
+                        this@Column.AnimatedVisibility(
+                            visible = isVisibleBtn,
+                            modifier = Modifier.align(CenterStart),
+                            enter = fadeIn(),
+                            exit = fadeOut()
                         ) {
-                            Text(
-                                text = "${it + 1}",
-                                modifier = Modifier.align(Center),
-                                style = TextStyle(fontSize = 20.dp.textSp)
+                            Image(
+                                painter = painterResource(id = R.drawable.qwe),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .width((15 * progress).dp)
+                                    .height((30 * progress).dp)
                             )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    BarGraph(
-                        modifier = Modifier.fillMaxWidth(),
-                        valueList = listOf(0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3),
-                        selectIndex = state.currentPage,
-                        monthlyCount = listOf(
-                            MonthlyCount(7, 5),
-                            MonthlyCount(8, 4),
-                            MonthlyCount(9, 3)
-                        )
-                    ) {
-                        scope.launch {
-                            state.scrollToPage(it)
+                        this@Column.AnimatedVisibility(
+                            visible = isVisibleBtn,
+                            modifier = Modifier.align(CenterEnd),
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.asd),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .width((15 * progress).dp)
+                                    .height((30 * progress).dp)
+                            )
                         }
+
                     }
 
-                    Spacer(modifier = Modifier.height(70.dp))
-
-
-                    Graph(
+                    TabRow(
+                        selectedTabIndex = tabIndex,
                         modifier = Modifier
+                            .height(54.dp)
                             .fillMaxWidth(),
-                        xSize = if (test) 5 else 7,
-                        ySize = 3,
-                        points = if (test) {
-                            when(type){
-                                0 -> list30
-                                1 -> list30_2
-                                else -> list30_3
-                            }
-                        } else {
-                            when(type){
-                                0 -> list7
-                                1 -> list7_2
-                                else -> list7_3
-                            }
-                        },
-                        isVisibleXClickLabel = test
+                        indicator = { tabPositions ->
+                            Spacer(
+                                modifier = Modifier
+                                    .tabIndicatorOffset(
+                                        currentTabPosition = tabPositions[tabIndex]
+                                    )
+                                    .height(2.dp)
+                                    .background(Color(0xffff4857))
+                            )
+                        }
                     ) {
-                        scope.launch {
-                            scrollState.scrollBy(-it)
+                        tabTitles.forEachIndexed { index, s ->
+                            val isSelected = index == tabIndex
+                            Tab(
+                                selected = isSelected,
+                                onClick = { tabIndex = index },
+                                modifier = Modifier.background(Color(0xffffffff))
+                            ) {
+                                Text(
+                                    text = s,
+                                    style = TextStyle(
+                                        fontSize = 15.dp.textSp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) Color(0xFFFF4857) else Color(
+                                            0xff111111
+                                        ),
+                                        fontFamily = Font.nanumSquareRoundFont
+                                    )
+                                )
+                            }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(50.dp))
-                    Row(modifier = Modifier.height(50.dp)) {
-                        Button(onClick = { test = !test }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "월/주")
-                        }
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
 
-                        Spacer(modifier = Modifier.width(30.dp))
-
-                        Button(onClick = { type-- }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "-")
-                        }
-
-                        Button(onClick = { type++ }, modifier = Modifier.height(50.dp)) {
-                            Text(text = "+")
-                        }
+            ) {
+                repeat(20) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                    ) {
+                        Text(
+                            text = it.toString(),
+                            style = TextStyle(
+                                fontSize = 24.dp.textSp
+                            ),
+                            modifier = Modifier.align(Center)
+                        )
                     }
-
                 }
             }
+
+
+        }
+
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    )
+    {
+        IconButton({
+            Log.d("qweqwe", "click")
+        }, modifier = Modifier.size(54.dp)) {
+            Image(
+                painter = painterResource(id = R.drawable.back_arrow_svg),
+                contentDescription = "back"
+            )
+
         }
     }
 }
@@ -440,12 +737,12 @@ fun Int.barGraphMaxValue() = if (this > 7) 7 else this
 
 @Composable
 fun baseTextPaint(
-    lineTextSize : Int,
+    lineTextSize: Int,
     textColor: Int,
-    align : Paint.Align,
-    density : Density,
+    align: Paint.Align,
+    density: Density,
     context: Context,
-    typeFace : Int
+    typeFace: Int
 ) = remember(density) {
     Paint().apply {
         color = textColor
@@ -453,7 +750,7 @@ fun baseTextPaint(
         textSize = density.run { lineTextSize.dp.toPx() }
         isAntiAlias = true
         Typeface.createFromAsset(context.resources.assets, "nanum_square_round.ttf").run {
-            typeface = Typeface.create(this,typeFace)
+            typeface = Typeface.create(this, typeFace)
         }
     }
 }
@@ -481,21 +778,44 @@ fun Graph(
 
     val isEmptyList = points.find { it.y != null } == null
 
-    val xTextPaint = baseTextPaint(lineTextSize, textColor, Paint.Align.CENTER, density,context,Typeface.NORMAL)
-    val xTodayTextPaint = baseTextPaint(lineTextSize, android.graphics.Color.parseColor("#FFFF4857"), Paint.Align.CENTER, density,context,Typeface.BOLD)
-    val yTextPaint = baseTextPaint(lineTextSize, textColor, Paint.Align.LEFT, density,context,Typeface.NORMAL)
-    val emptyTextPaint = baseTextPaint(13, android.graphics.Color.parseColor("#FF999999"), Paint.Align.CENTER, density,context,Typeface.NORMAL)
+    val xTextPaint = baseTextPaint(
+        lineTextSize,
+        textColor,
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
+    val xTodayTextPaint = baseTextPaint(
+        lineTextSize,
+        android.graphics.Color.parseColor("#FFFF4857"),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.BOLD
+    )
+    val yTextPaint =
+        baseTextPaint(lineTextSize, textColor, Paint.Align.LEFT, density, context, Typeface.NORMAL)
+    val emptyTextPaint = baseTextPaint(
+        13,
+        android.graphics.Color.parseColor("#FF999999"),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
 
     var clickBarOffsetX by remember { mutableStateOf(0f) }
     var selectPoint by remember {
         mutableStateOf(SelectPoint())
     }
 
-    val maxValue = points.maxOfOrNull { it.y?:0 } ?: 0
-    val minValue = points.filter { it.y != null }.minOfOrNull { it.y?:0 } ?: 0
+    val maxValue = points.maxOfOrNull { it.y ?: 0 } ?: 0
+    val minValue = points.filter { it.y != null }.minOfOrNull { it.y ?: 0 } ?: 0
 
-    val maxYValue = if(maxValue.getCeil() == minValue.getFloor()) maxValue * 2 else maxValue.getCeil()
-    val minYValue = if(maxValue.getCeil() == minValue.getFloor()) 0 else minValue.getFloor()
+    val maxYValue =
+        if (maxValue.getCeil() == minValue.getFloor()) maxValue * 2 else maxValue.getCeil()
+    val minYValue = if (maxValue.getCeil() == minValue.getFloor()) 0 else minValue.getFloor()
 
     val yRange = maxYValue - minYValue
 
@@ -532,8 +852,8 @@ fun Graph(
         Text(
             text = "kcal",
             modifier = Modifier
-                .align(if(isEmptyList) BottomStart else TopStart)
-                .padding(bottom = if(isEmptyList) 40.dp else 0.dp),
+                .align(if (isEmptyList) BottomStart else TopStart)
+                .padding(bottom = if (isEmptyList) 40.dp else 0.dp),
             style = TextStyle(
                 fontSize = 11.dp.textSp,
                 fontWeight = FontWeight.W400,
@@ -582,7 +902,8 @@ fun Graph(
                     )
                 }
         ) {
-            val xAxisSpace = (size.width - START_PADDING.dp.toPx() - (POINT_PADDING*2).dp.toPx()) / (points.size - 1)
+            val xAxisSpace =
+                (size.width - START_PADDING.dp.toPx() - (POINT_PADDING * 2).dp.toPx()) / (points.size - 1)
             val yAxisSpace = (size.height - BOTTOM_PADDING.dp.toPx()) / (ySize - 1)
 
             val valueToPx = (size.height - BOTTOM_PADDING.dp.toPx()) / yRange
@@ -591,12 +912,13 @@ fun Graph(
 
 
             for (i in points.indices step xValueSpace) {
-                val isToday = SimpleDateFormat("MM-dd").format(System.currentTimeMillis()) == points[i].x
+                val isToday =
+                    SimpleDateFormat("MM-dd").format(System.currentTimeMillis()) == points[i].x
                 drawContext.canvas.nativeCanvas.drawText(
-                    if(isToday) "오늘" else points[i].x,
+                    if (isToday) "오늘" else points[i].x,
                     (xAxisSpace * i) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx(),
                     size.height,
-                    if(isToday) xTodayTextPaint else xTextPaint
+                    if (isToday) xTodayTextPaint else xTextPaint
                 )
             }
 
@@ -621,17 +943,17 @@ fun Graph(
                     strokeWidth = 1.dp.toPx()
                 )
 
-                if(isEmptyList) break
+                if (isEmptyList) break
             }
 
-            if(isEmptyList){
+            if (isEmptyList) {
                 drawContext.canvas.nativeCanvas.drawText(
                     "식사를 기록해 주세요.",
-                    size.width/2,
+                    size.width / 2,
                     size.height - 105.dp.toPx(),
                     emptyTextPaint
                 )
-            }else{
+            } else {
                 if (clickBarOffsetX != 0f) {
                     drawLine(
                         color = dragLineColor,
@@ -659,7 +981,8 @@ fun Graph(
                     reset()
                     for (i in points.indices) {
                         points[i].y?.let { yValue ->
-                            val x = (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
+                            val x =
+                                (xAxisSpace * points[i].index) + START_PADDING.dp.toPx() + POINT_PADDING.dp.toPx()
                             val y =
                                 ((size.height - BOTTOM_PADDING.dp.toPx()) - (valueToPx * (yValue - minYValue)))
 
@@ -686,7 +1009,7 @@ fun Graph(
                                     i == 0 || i == points.lastIndex
                                 )
                             )
-                        }?:run{
+                        } ?: run {
                             when (i) {
                                 0 -> {
                                     points.first { it.y != null }.y?.let { firstYValue ->
@@ -759,9 +1082,9 @@ fun SpeechBubble(
     selectPoint: SelectPoint,
     boxScope: BoxScope,
     context: Context,
-    isVisibleXClickLabel : Boolean,
-    clickBarOffsetX : Float
-){
+    isVisibleXClickLabel: Boolean,
+    clickBarOffsetX: Float
+) {
     var layoutWidthOffset by remember { mutableStateOf(0f) }
     var layoutHeightOffset by remember { mutableStateOf(0f) }
 
