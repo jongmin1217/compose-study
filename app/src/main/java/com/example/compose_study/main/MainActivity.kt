@@ -29,7 +29,7 @@ import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.*
 import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.Center
@@ -37,9 +37,8 @@ import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.Start
+import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -64,7 +63,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.zIndex
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
 import kotlinx.coroutines.launch
@@ -326,9 +324,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun PagerTest(){
+fun PagerTest() {
     val scope = rememberCoroutineScope()
     val state = rememberPagerState(initialPage = 500)
+    val width = LocalConfiguration.current.screenWidthDp
 
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -340,37 +339,69 @@ fun PagerTest(){
                 .fillMaxWidth()
         ) {
             val page = it % 7
-            val image = painterResource(
-                id = when(page){
-                    0 -> R.drawable.image_1
-                    1 -> R.drawable.image_2
-                    2 -> R.drawable.image_3
-                    3 -> R.drawable.image_4
-                    4 -> R.drawable.image_5
-                    5 -> R.drawable.image_6
-                    else -> R.drawable.image_7
-                }
-            )
 
-            Image(
-                painter = image,
-                contentDescription = "",
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(400.dp)
-                    .graphicsLayer {
-                        val pageOffset = state.offsetForPage(it)
-                        translationX = size.width * pageOffset
-
-                        val endOffset = state.endOffsetForPage(it)
-
-                        shape = RectPath(progress = 1f - endOffset.absoluteValue)
-                        clip = true
-
+            ) {
+                val image = painterResource(
+                    id = when (page) {
+                        0 -> R.drawable.image_1
+                        1 -> R.drawable.image_2
+                        2 -> R.drawable.image_3
+                        3 -> R.drawable.image_4
+                        4 -> R.drawable.image_5
+                        5 -> R.drawable.image_6
+                        else -> R.drawable.image_7
                     }
-                ,
-                contentScale = ContentScale.Companion.Crop
-            )
+                )
+
+                Image(
+                    painter = image,
+                    contentDescription = "",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp)
+                        .slidePager(it, state)
+                        .align(TopCenter),
+                    contentScale = ContentScale.Companion.Crop
+                )
+
+                Text(
+                    text = "타이틀 입니다. $page",
+                    style = TextStyle(
+                        fontSize = 20.dp.textSp,
+                        color = Color(0xffffffff),
+                        fontWeight = FontWeight.W700
+                    ),
+                    modifier = Modifier
+                        .align(
+                            BottomCenter
+                        )
+                        .padding(bottom = 70.dp)
+                        .graphicsLayer {
+
+                            val pageOffset = state.offsetForPage(it)
+                            translationX = -(width * pageOffset)
+                        }
+                )
+
+                Text(
+                    text = "서브정보 입니다. $page",
+                    style = TextStyle(
+                        fontSize = 14.dp.textSp,
+                        color = Color(0xffffffff),
+                        fontWeight = FontWeight.W700
+                    ),
+                    modifier = Modifier
+                        .align(
+                            BottomCenter
+                        )
+                        .padding(bottom = 40.dp)
+                )
+            }
+
+
         }
 
         Spacer(modifier = Modifier.height(50.dp))
@@ -396,6 +427,20 @@ fun PagerTest(){
 
 }
 
+@SuppressLint("UnnecessaryComposedModifier")
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.slidePager(page: Int, state: PagerState) = composed {
+    this.graphicsLayer {
+        val pageOffset = state.offsetForPage(page)
+        translationX = size.width * pageOffset
+
+        val endOffset = state.endOffsetForPage(page)
+
+        shape = RectPath(progress = 1f - endOffset.absoluteValue)
+        clip = true
+    }
+}
+
 class RectPath(private val progress: Float) : Shape {
     override fun createOutline(
         size: Size, layoutDirection: LayoutDirection, density: Density
@@ -403,7 +448,7 @@ class RectPath(private val progress: Float) : Shape {
         return Outline.Generic(Path().apply {
             addRect(
                 Rect(
-                    size.width - (size.width * progress),0f,size.width,size.height
+                    size.width - (size.width * progress), 0f, size.width, size.height
                 )
             )
         })
@@ -414,6 +459,7 @@ class RectPath(private val progress: Float) : Shape {
 fun PagerState.calculateCurrentOffsetForPage(page: Int): Float {
     return (currentPage - page) + currentPageOffsetFraction
 }
+
 @OptIn(ExperimentalFoundationApi::class)
 fun PagerState.offsetForPage(page: Int) = (currentPage - page) + currentPageOffsetFraction
 
@@ -433,9 +479,9 @@ fun ScrollTest() {
     val offsetY = collapsingToolbarScaffoldState.offsetY
     val progress = collapsingToolbarScaffoldState.toolbarState.progress
 
-    var isVisibleBtn by remember{ mutableStateOf(true) }
+    var isVisibleBtn by remember { mutableStateOf(true) }
 
-    LaunchedEffect(progress){
+    LaunchedEffect(progress) {
         isVisibleBtn = progress > 0.9f
     }
 
