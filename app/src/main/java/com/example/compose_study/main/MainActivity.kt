@@ -10,6 +10,7 @@ import android.util.Log
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -19,27 +20,35 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.Alignment.Companion.BottomCenter
+import androidx.compose.ui.Alignment.Companion.BottomEnd
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterStart
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.Start
+import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -53,15 +62,22 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.*
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
@@ -71,8 +87,10 @@ import me.onebone.toolbar.ScrollStrategy
 import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
+import java.time.*
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
+import java.util.*
 import kotlin.math.*
 
 
@@ -217,6 +235,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val base = LocalDate.of(2023, 8, 21).getMonSunDay()
+        val now = base.toDateString()
+        val pre = base.preRange().toDateString()
+        val next = base.nextRange().toDateString()
+        Log.d("qweqwe", "$now $pre $next")
+
+
 
         setContent {
             val state = rememberPagerState()
@@ -228,8 +253,14 @@ class MainActivity : ComponentActivity() {
 
 
             Surface(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    TextFieldTest()
+                }
                 //ScrollTest()
-                PagerTest()
+                //PagerTest()
+                //GaugeTest()
 //                Column(
 //                    modifier = Modifier
 //                        .fillMaxSize()
@@ -320,6 +351,492 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TextFieldTest() {
+    val pagerState = rememberPagerState(0)
+    val pagerState2 = rememberPagerState(0)
+
+    LaunchedEffect(key1 = pagerState.currentPage, block = {
+        if(pagerState2.currentPage != pagerState.currentPage){
+            pagerState2.scrollToPage(pagerState.currentPage)
+        }
+    })
+
+    LaunchedEffect(key1 = pagerState2.currentPage, block = {
+        if(pagerState.currentPage != pagerState2.currentPage){
+            pagerState.scrollToPage(pagerState2.currentPage)
+        }
+    })
+
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        HorizontalPager(pageCount = 10, state = pagerState) {
+            Text(text = "$it", modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp), textAlign = TextAlign.Center)
+        }
+
+        HorizontalPager(pageCount = 10, state = pagerState2) {
+            Text(text = "$it", modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp), textAlign = TextAlign.Center)
+        }
+    }
+
+}
+
+@Composable
+fun GaugeTest() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xfffafafa))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            repeat(103) {
+                val full = 9000f + Math.random().toFloat() * (10000f - 9000f)
+                val current = Math.random().toFloat() * (12000f)
+
+                Spacer(modifier = Modifier.height(50.dp))
+
+                CustomGauge(
+                    full,
+                    if (it % 2 == 0) 0f else current,
+                    "고지가 얼마 안남았다 멍",
+                    if (it % 2 == 0) 0 else 2
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomGauge(
+    fullGaugeValue: Float?,
+    currentGaugeValue: Float,
+    title: String,
+    count: Int
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .shadow(
+                elevation = 6.dp,
+                spotColor = Color(0x4A000000),
+                ambientColor = Color(0x4A000000)
+            )
+            .background(
+                color = Color(0xFFFFFFFF),
+                shape = RoundedCornerShape(size = 8.dp)
+            )
+    ) {
+
+        GaugeHeader(
+            title = title,
+            count = count,
+            currentGaugeValue = currentGaugeValue,
+            isEmptyGoal = fullGaugeValue == null
+        )
+
+        fullGaugeValue?.let {
+            GaugeMiddle(
+                currentGaugeValue = currentGaugeValue,
+                percent = currentGaugeValue / fullGaugeValue
+            )
+
+            Gauge(fullGaugeValue, currentGaugeValue)
+
+            GaugeBottomValue(fullGaugeValue)
+        } ?: run {
+            GaugeBottomBtn(currentGaugeValue)
+        }
+
+    }
+}
+
+@Composable
+fun GaugeMiddle(
+    currentGaugeValue: Float,
+    percent: Float
+) {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val width = configuration.screenWidthDp.dpToPixels(context)
+
+    if (currentGaugeValue != 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 9.5.dp)
+        ) {
+            GaugeSpeechBubble(
+                ((width - 80.dpToPixels(context)) * if (percent > 0.98f) 0.98f else percent) + 20.dpToPixels(
+                    context
+                ),
+                this,
+                "${((percent * 100) * 10).roundToInt() / 10f}%"
+            )
+        }
+    } else {
+        Spacer(modifier = Modifier.height(32.5.dp))
+    }
+}
+
+@Composable
+fun GaugeBottomBtn(
+    currentGaugeValue: Float
+) {
+    Spacer(modifier = Modifier.height(if (currentGaugeValue == 0f) 21.dp else 15.dp))
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .height(36.dp)
+            .border(
+                width = 1.dp,
+                color = Color(0xFFDDDDDD),
+                shape = RoundedCornerShape(size = 3.dp)
+            )
+            .background(color = Color(0xFFFFFFFF), shape = RoundedCornerShape(size = 3.dp))
+    ) {
+        Text(
+            text = if (currentGaugeValue == 0f) "식사 기록하기" else "반복 식단 등록하기",
+            style = TextStyle(
+                fontSize = 13.dp.textSp,
+                fontWeight = FontWeight.W400,
+                color = Color(0xff111111),
+                fontFamily = Font.nanumSquareRoundFont
+            ),
+            modifier = Modifier.align(Center)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+}
+
+@Composable
+fun GaugeHeader(
+    title: String,
+    count: Int,
+    currentGaugeValue: Float,
+    isEmptyGoal: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 17.dp, start = 20.dp, end = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Spacer(modifier = Modifier.height(5.5.dp))
+            Row {
+                CenterText(
+                    text = title,
+                    textStyle = TextStyle(
+                        fontSize = 18.dp.textSp,
+                        fontWeight = FontWeight.W700,
+                        color = Color(0xff111111),
+                        fontFamily = Font.nanumSquareRoundFont
+                    ),
+                    modifier = Modifier.height(26.dp)
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                if (count != 0) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                shape = RoundedCornerShape(100.dp),
+                                color = Color(0xFFEBFAF6)
+                            )
+                            .align(CenterVertically)
+                    ) {
+                        Text(
+                            text = "${count}회",
+                            modifier = Modifier
+                                .padding(horizontal = 7.dp, vertical = 4.dp)
+                                .align(Center),
+                            style = TextStyle(
+                                fontSize = 10.dp.textSp,
+                                color = Color(0xFF04BF8A),
+                                fontWeight = FontWeight.W700,
+                                fontFamily = Font.nanumSquareRoundFont
+                            ),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 10.dp.textSp
+                        )
+                    }
+                }
+
+            }
+
+            val annotatedString = if (isEmptyGoal && currentGaugeValue == 0f) {
+                buildAnnotatedString { append("반복식단을 등록하고 식단 기록을 관리하세요.") }
+            } else {
+                buildAnnotatedString {
+                    append("오늘 총")
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color(0xFF04BF8A),
+                            fontWeight = FontWeight.W700,
+                            fontSize = 14.dp.textSp,
+                            fontFamily = Font.nanumSquareRoundFont
+                        )
+                    ) {
+                        append(" ${currentGaugeValue.toInt().decimal()} kcal")
+                    }
+                    append("를 섭취했어요")
+                }
+            }
+
+
+            CenterText(
+                text = annotatedString,
+                textStyle = TextStyle(
+                    fontSize = 14.dp.textSp,
+                    color = Color(0xFF777777),
+                    fontWeight = FontWeight.W400,
+                    fontFamily = Font.nanumSquareRoundFont
+                ),
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .height(16.dp)
+            )
+        }
+
+        val imageModifier = if (isEmptyGoal && currentGaugeValue == 0f) {
+            Modifier
+                .padding(top = 10.dp)
+                .width(16.dp)
+                .height(15.dp)
+        } else {
+            Modifier.size(58.dp)
+        }
+
+
+        Image(
+            painter = painterResource(
+                id = if (isEmptyGoal && currentGaugeValue == 0f) {
+                    R.drawable.btn_go
+                } else {
+                    if (currentGaugeValue == 0f) {
+                        R.drawable.test1
+                    } else {
+                        R.drawable.test2
+                    }
+                }
+            ),
+            contentDescription = "",
+            modifier = imageModifier
+        )
+    }
+}
+
+@Composable
+fun GaugeBottomValue(
+    fullGaugeValue: Float
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(top = GAUGE_HEIGHT + 6.dp, bottom = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+
+        AppText(
+            text = "하루 목표 칼로리",
+            style = TextStyle(
+                fontSize = 10.dp.textSp,
+                fontWeight = FontWeight.W400,
+                color = Color(0xffaaaaaa),
+                fontFamily = Font.nanumSquareRoundFont
+            ),
+            modifier = Modifier.align(CenterVertically),
+            lineHeight = 11.dp.textSp
+        )
+
+        AppText(
+            text = "${fullGaugeValue.toInt().decimal()} kcal",
+            style = TextStyle(
+                fontSize = 11.dp.textSp,
+                fontWeight = FontWeight.W700,
+                color = Color(0xff444444),
+                fontFamily = Font.nanumSquareRoundFont
+            ),
+            modifier = Modifier.align(CenterVertically),
+            lineHeight = 12.dp.textSp
+        )
+
+    }
+}
+
+@Composable
+fun Gauge(
+    fullGaugeValue: Float,
+    currentGaugeValue: Float
+) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        onDraw = {
+            fullGaugeBar(Color(if (currentGaugeValue == 0f) 0xffF2F2F2 else 0xfff8f0dc))
+            if (currentGaugeValue != 0f) currentGaugeBar(fullGaugeValue, currentGaugeValue)
+            bulkhead()
+        }
+    )
+}
+
+val GAUGE_HEIGHT = 12.dp
+val GAUGE_RADIUS = GAUGE_HEIGHT / 2
+
+fun DrawScope.bulkhead() {
+    this.run {
+        repeat(3) {
+            val xValue = size.width * ((it + 1).toFloat() / 4f)
+
+            drawLine(
+                color = Color(0xffd9d9d9),
+                Offset(xValue, 0f),
+                Offset(xValue, GAUGE_HEIGHT.toPx()),
+                strokeWidth = 1.dp.toPx(),
+                blendMode = BlendMode.Multiply
+            )
+        }
+    }
+}
+
+fun DrawScope.currentGaugeBar(
+    fullGaugeValue: Float,
+    currentGaugeValue: Float
+) {
+    val gauge = currentGaugeValue / fullGaugeValue
+    val barGauge = size.width * gauge
+
+    val color = when (gauge) {
+        in 0f..0.25f -> Color(0xffffca42)
+        in 0.25f..0.5f -> Color(0xffD4E012)
+        in 0.5f..0.75f -> Color(0xff84DA7C)
+        in 0.5f..1f -> Color(0xff04BF8A)
+        else -> Color(0xffff0000)
+    }
+
+    var startAngle = 90f
+    var startSweepAngle = 180f
+
+    var endAngle = 0f
+    var endSweepAngle = -360f
+
+    if (barGauge <= GAUGE_RADIUS.toPx()) {
+        val test = barGauge / GAUGE_RADIUS.toPx()
+        startAngle *= (2 - test)
+        startSweepAngle *= test
+    }
+
+    if (barGauge >= size.width - GAUGE_RADIUS.toPx()) {
+        val test = barGauge - (size.width - GAUGE_RADIUS.toPx())
+        val test2 = test / GAUGE_RADIUS.toPx()
+        endAngle = 90f - (90f * test2)
+        endSweepAngle = (180 + (180 * test2))
+    }
+
+    this.run {
+        drawArc(
+            color = color,
+            startAngle = startAngle,
+            sweepAngle = startSweepAngle,
+            useCenter = false,
+            topLeft = Offset(0f, 0f),
+            size = Size(GAUGE_HEIGHT.toPx(), GAUGE_HEIGHT.toPx())
+        )
+
+        if (barGauge > GAUGE_RADIUS.toPx()) {
+            drawRect(
+                color = color,
+                topLeft = Offset(GAUGE_RADIUS.toPx(), 0f),
+                size = Size(
+                    if (barGauge >= size.width - GAUGE_RADIUS.toPx()) size.width - GAUGE_HEIGHT.toPx() else barGauge - GAUGE_RADIUS.toPx(),
+                    GAUGE_HEIGHT.toPx()
+                )
+            )
+        }
+
+        if (barGauge >= size.width - GAUGE_RADIUS.toPx()) {
+            drawArc(
+                color = color,
+                startAngle = endAngle,
+                sweepAngle = endSweepAngle,
+                useCenter = false,
+                topLeft = Offset(size.width - GAUGE_HEIGHT.toPx(), 0f),
+                size = Size(GAUGE_HEIGHT.toPx(), GAUGE_HEIGHT.toPx())
+            )
+        }
+    }
+}
+
+fun DrawScope.fullGaugeBar(color: Color) {
+    this.run {
+        drawLine(
+            color = color,
+            Offset(GAUGE_RADIUS.toPx(), GAUGE_RADIUS.toPx()),
+            Offset(size.width - GAUGE_RADIUS.toPx(), GAUGE_RADIUS.toPx()),
+            strokeWidth = GAUGE_HEIGHT.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+
+@Composable
+fun GaugeSpeechBubble(
+    x: Float,
+    boxScope: BoxScope,
+    text: String
+) {
+    var layoutWidthOffset by remember { mutableStateOf(0f) }
+
+
+    boxScope.run {
+        DimensionSubComposeLayout(
+            modifier = Modifier.align(TopStart),
+            mainContent = {
+                Column(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset((x - layoutWidthOffset).roundToInt(), 0)
+                        }
+                ) {
+                    GaugeTextBox(text)
+
+                    Image(
+                        painter = painterResource(id = R.drawable.polygon_4),
+                        contentDescription = "",
+                        modifier = Modifier
+                            .width(8.dp)
+                            .height(5.dp)
+                            .align(CenterHorizontally)
+                            .padding(bottom = 1.dp)
+                    )
+                }
+            }
+        ) {
+            layoutWidthOffset = it.width / 2
+        }
+    }
+
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
@@ -1194,6 +1711,32 @@ fun SpeechBubble(
 
 }
 
+@Composable
+fun GaugeTextBox(text: String) {
+    Box(
+        modifier = Modifier
+            .background(
+                shape = RoundedCornerShape(100.dp),
+                color = Color(0xbf111111)
+            )
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(horizontal = 7.dp, vertical = 4.dp)
+                .align(Center),
+            style = TextStyle(
+                fontSize = 9.dp.textSp,
+                color = Color(0xffffffff),
+                fontWeight = FontWeight.W700,
+                fontFamily = Font.nanumSquareRoundFont
+            ),
+            textAlign = TextAlign.Center,
+            lineHeight = 10.dp.textSp
+        )
+    }
+}
+
 
 @Composable
 fun TextBox(text: String) {
@@ -1267,8 +1810,6 @@ fun Int.dpToPixels(context: Context): Float = TypedValue.applyDimension(
     TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), context.resources.displayMetrics
 )
 
-fun Int.decimal() = DecimalFormat("#,###").format(this) ?: ""
-
 
 fun DrawScope.drawNormalPath(path: Path, lineColor: Color) {
     drawPath(
@@ -1314,3 +1855,46 @@ fun DrawScope.drawPoint(
         center = point.getOffset()
     )
 }
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun LocalDate.getMonSunDay(): Pair<Long, Long> {
+    val zoneId = ZoneId.of("Asia/Seoul")
+
+    val monday = this.atStartOfDay(zoneId).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val mondayMilliseconds = monday.toInstant().toEpochMilli()
+
+    val sunday = this.atStartOfDay(zoneId).with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+    val lastMomentOfSunday =
+        ZonedDateTime.of(sunday.toLocalDate(), LocalTime.of(23, 59, 59), zoneId)
+    val sundayMilliseconds = lastMomentOfSunday.toInstant().toEpochMilli()
+
+    return mondayMilliseconds to sundayMilliseconds
+}
+
+@SuppressLint("SimpleDateFormat")
+fun Pair<Long, Long>.toDateString(): String {
+    val monthSdf = SimpleDateFormat("MM")
+    val daySdf = SimpleDateFormat("dd")
+    val startMonth = monthSdf.format(this.first).toInt()
+    val startDay = daySdf.format(this.first).toInt()
+    val endMonth = monthSdf.format(this.second).toInt()
+    val endDay = daySdf.format(this.second).toInt()
+    return "${startMonth}월 ${startDay}일 - ${endMonth}월 ${endDay}일"
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun Pair<Long, Long>.preRange(): Pair<Long, Long> {
+    val instant = Instant.ofEpochMilli((this.first - 1))
+    val localDate = instant.atZone(ZoneId.of("Asia/Seoul")).toLocalDate()
+    return localDate.getMonSunDay()
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun Pair<Long, Long>.nextRange(): Pair<Long, Long> {
+    val instant = Instant.ofEpochMilli((this.second + 1000))
+    val localDate = instant.atZone(ZoneId.of("Asia/Seoul")).toLocalDate()
+    return localDate.getMonSunDay()
+}
+
+fun Int.decimal() = DecimalFormat("#,###").format(this) ?: ""
