@@ -1,24 +1,34 @@
 package com.example.compose_study.main
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Paint
+import android.graphics.Picture
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.*
+import android.provider.MediaStore
 import android.util.Log
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -48,7 +58,11 @@ import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -56,11 +70,13 @@ import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -79,12 +95,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.*
+import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
 import kotlinx.coroutines.launch
 import me.onebone.toolbar.CollapsingToolbarScaffold
 import me.onebone.toolbar.ScrollStrategy
 import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
+import soup.compose.photo.ExperimentalPhotoApi
+import soup.compose.photo.PhotoBox
+import soup.compose.photo.rememberPhotoState
+import java.net.URI
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.time.*
@@ -230,162 +252,181 @@ class MainActivity : ComponentActivity() {
     )
 
 
-    @OptIn(ExperimentalFoundationApi::class)
+    private val velocityTracker = VelocityTracker()
+    @OptIn(ExperimentalFoundationApi::class, ExperimentalPhotoApi::class)
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val base = LocalDate.of(2023, 8, 21).getMonSunDay()
-        val now = base.toDateString()
-        val pre = base.preRange().toDateString()
-        val next = base.nextRange().toDateString()
-        Log.d("qweqwe", "$now $pre $next")
-
-
-
         setContent {
-            val state = rememberPagerState()
+
+            val context = LocalContext.current
+
+            val qwe = LocalConfiguration.current.screenWidthDp
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
+            val screenHeight = LocalConfiguration.current.screenHeightDp.dpToPixels(context)
+
+            val verticalPadding = (screenHeight - screenWidth)/2
+
+            var imageUri by remember {
+                mutableStateOf<Uri?>(null)
+            }
+
+
+            val launcher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.StartActivityForResult(),
+                onResult = {
+                    if (it.resultCode == Activity.RESULT_OK) {
+                        val data = it.data
+                        imageUri = data?.data
+                    }
+                }
+            )
+
+            var initSize = Size(0f,0f)
+            val rotation = remember { Animatable(0f) }
+            val offsetY = remember { Animatable(0f) }
+            val scale = remember { Animatable(1f) }
+            var initImageSize by remember { mutableStateOf(false) }
+            val zoomState = rememberZoomState(screenWidth = screenWidth)
             val scope = rememberCoroutineScope()
-            val scrollState = rememberScrollState()
 
-            var test by remember { mutableStateOf(false) }
-            var type by remember { mutableStateOf(0) }
+            val test = VelocityTracker()
 
+            val picture = remember{ Picture()}
 
             Surface(modifier = Modifier.fillMaxSize()) {
+                //val photoState = rememberPhotoState()
                 Box(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
                 ) {
-                    TextFieldTest()
+                    imageUri?.let {
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xffffffff))
+                        ){
+                            AsyncImage(
+                                model = it,
+                                contentDescription = "",
+                                onSuccess = {
+                                    val size = it.painter.intrinsicSize
+                                    zoomState.setContentSize(size)
+                                    if(size.width < screenWidth){
+                                        scope.launch {
+                                            zoomState.setScale(screenWidth/size.width)
+                                        }
+                                    }
+
+                                    if(size.height < screenWidth){
+                                        scope.launch {
+                                            zoomState.setScale(screenWidth/size.height)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .zoomable(zoomState)
+                                    .rotate(rotation.value)
+                            )
+
+                            Button(
+                                onClick = {
+                                    if(!rotation.isRunning){
+                                        scope.launch {
+                                            rotation.animateTo(rotation.value + 90f)
+                                        }
+                                        scope.launch {
+                                            val preSize = zoomState.getContentSize()
+                                            val newSize = Size(preSize.height,preSize.width)
+
+                                            zoomState.reset(newSize)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.align(Center)
+                            ) {
+                                Text(text = "asdf")
+                            }
+
+                            Spacer(modifier = Modifier.fillMaxWidth().height(qwe.dp).align(Center).background(Color(0x22000000)))
+                        }
+                    }?:run{
+                        Button(onClick = {
+                            launcher.launch(
+                                Intent(
+                                    Intent.ACTION_PICK,
+                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                                )
+                            )
+                        }) {
+                            Text(text = "asdf")
+                        }
+                    }
+
                 }
-                //ScrollTest()
-                //PagerTest()
-                //GaugeTest()
-//                Column(
-//                    modifier = Modifier
-//                        .fillMaxSize()
-//                        .verticalScroll(scrollState)
-//                ) {
-//                    HorizontalPager(
-//                        pageCount = 12,
-//                        modifier = Modifier
-//                            .fillMaxWidth()
-//                            .height(200.dp)
-//                            .background(Color(0xffbbbbbb)),
-//                        state = state
-//                    ) {
-//                        Box(
-//                            modifier = Modifier.fillMaxSize()
-//                        ) {
-//                            Text(
-//                                text = "${it + 1}",
-//                                modifier = Modifier.align(Center),
-//                                style = TextStyle(fontSize = 20.dp.textSp)
-//                            )
-//                        }
-//                    }
-//
-//                    Spacer(modifier = Modifier.height(30.dp))
-//
-//                    BarGraph(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        valueList = listOf(0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3),
-//                        selectIndex = state.currentPage,
-//                        monthlyCount = listOf(
-//                            MonthlyCount(7, 5),
-//                            MonthlyCount(8, 4),
-//                            MonthlyCount(9, 3)
-//                        )
-//                    ) {
-//                        scope.launch {
-//                            state.scrollToPage(it)
-//                        }
-//                    }
-//
-//                    Spacer(modifier = Modifier.height(70.dp))
-//
-//
-//                    Graph(
-//                        modifier = Modifier
-//                            .fillMaxWidth(),
-//                        xSize = if (test) 5 else 7,
-//                        ySize = 3,
-//                        points = if (test) {
-//                            when(type){
-//                                0 -> list30
-//                                1 -> list30_2
-//                                else -> list30_3
-//                            }
-//                        } else {
-//                            when(type){
-//                                0 -> list7
-//                                1 -> list7_2
-//                                else -> list7_3
-//                            }
-//                        },
-//                        isVisibleXClickLabel = test
-//                    ) {
-//                        scope.launch {
-//                            scrollState.scrollBy(-it)
-//                        }
-//                    }
-//
-//                    Spacer(modifier = Modifier.height(50.dp))
-//                    Row(modifier = Modifier.height(50.dp)) {
-//                        Button(onClick = { test = !test }, modifier = Modifier.height(50.dp)) {
-//                            Text(text = "월/주")
-//                        }
-//
-//                        Spacer(modifier = Modifier.width(30.dp))
-//
-//                        Button(onClick = { type-- }, modifier = Modifier.height(50.dp)) {
-//                            Text(text = "-")
-//                        }
-//
-//                        Button(onClick = { type++ }, modifier = Modifier.height(50.dp)) {
-//                            Text(text = "+")
-//                        }
-//                    }
-//
-//                }
             }
         }
     }
 }
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TextFieldTest() {
-    val pagerState = rememberPagerState(0)
-    val pagerState2 = rememberPagerState(0)
+    var text by remember { mutableStateOf("") }
+    var hasFocus by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = pagerState.currentPage, block = {
-        if(pagerState2.currentPage != pagerState.currentPage){
-            pagerState2.scrollToPage(pagerState.currentPage)
-        }
-    })
+    OutlinedTextField(
+        value = text,
+        onValueChange = {
+            text = it
+        },
+        placeholder = {
+            if (!hasFocus) {
+                Text(
+                    text = "직접 입력해 주세요. (최대 100자)",
+                    style = TextStyle(
+                        fontSize = 16.dp.textSp,
+                        color = Color(0xffdddddd),
+                        fontWeight = FontWeight.W400,
+                        lineHeight = 24.dp.textSp
+                    )
+                )
+            }
 
-    LaunchedEffect(key1 = pagerState2.currentPage, block = {
-        if(pagerState.currentPage != pagerState2.currentPage){
-            pagerState.scrollToPage(pagerState2.currentPage)
-        }
-    })
 
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        HorizontalPager(pageCount = 10, state = pagerState) {
-            Text(text = "$it", modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp), textAlign = TextAlign.Center)
-        }
+        },
+        textStyle = TextStyle(
+            fontSize = 16.dp.textSp,
+            color = Color(0xff111111),
+            fontWeight = FontWeight.W400,
+            lineHeight = 24.dp.textSp
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .background(color = Color(0xFFFFFFFF))
+            .border(
+                width = 1.dp,
+                color = Color(0xffdddddd),
+                shape = RoundedCornerShape(size = 3.dp)
+            )
+            .onFocusChanged { focusState ->
+                hasFocus = focusState.hasFocus
+            },
+        shape = RoundedCornerShape(size = 3.dp),
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = Color(0xff111111),
+            backgroundColor = Color.White,
+            placeholderColor = Color(0xff111111),
+            cursorColor = Color(0xff111111),
+            focusedBorderColor = Color.Unspecified,
+            unfocusedBorderColor = Color.Unspecified,
+            leadingIconColor = Color(0xff111111),
+            trailingIconColor = Color(0xff111111)
 
-        HorizontalPager(pageCount = 10, state = pagerState2) {
-            Text(text = "$it", modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp), textAlign = TextAlign.Center)
-        }
-    }
+        )
+    )
 
 }
 

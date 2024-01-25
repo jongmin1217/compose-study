@@ -55,6 +55,10 @@ object Versions{
 
     const val onebone = "2.3.5"
 
+    const val coil = "2.4.0"
+
+    const val photo_view = "1.0.1"
+
 }
 
 object Libs{
@@ -131,8 +135,13 @@ object Libs{
     const val compose_viewmodel = "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.compose_lifecycle}"
     // Optional - Integration with LiveData
     const val compose_livedata = "androidx.compose.runtime:runtime-livedata"
+    const val compose_util = "androidx.compose.ui:ui-util:${Versions.compose}"
 
     const val onebone = "me.onebone:toolbar-compose:${Versions.onebone}"
+
+    const val coil = "io.coil-kt:coil-compose:${Versions.coil}"
+
+    const val photo_view = "io.github.fornewid:photo-compose:${Versions.photo_view}"
 }
 
 object TestLibs{

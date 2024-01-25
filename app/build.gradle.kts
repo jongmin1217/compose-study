@@ -104,6 +104,7 @@ dependencies {
 
 
     implementation(Libs.compose_icons_core)
+    implementation(Libs.compose_util)
     // Optional - Add full set of material icons
     implementation(Libs.compose_icons_extended)
     // Optional - Add window size utils
@@ -117,4 +118,8 @@ dependencies {
     implementation(Libs.compose_livedata)
 
     implementation(Libs.onebone)
+
+    implementation(Libs.coil)
+
+    implementation(Libs.photo_view)
 }
