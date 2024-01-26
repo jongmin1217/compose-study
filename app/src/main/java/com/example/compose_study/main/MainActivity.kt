@@ -29,6 +29,9 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -57,6 +60,7 @@ import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.rotate
@@ -69,6 +73,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -253,6 +258,7 @@ class MainActivity : ComponentActivity() {
 
 
     private val velocityTracker = VelocityTracker()
+
     @OptIn(ExperimentalFoundationApi::class, ExperimentalPhotoApi::class)
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -262,11 +268,8 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
 
-            val qwe = LocalConfiguration.current.screenWidthDp
             val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
-            val screenHeight = LocalConfiguration.current.screenHeightDp.dpToPixels(context)
-
-            val verticalPadding = (screenHeight - screenWidth)/2
+            var screenHeight by remember{ mutableStateOf(0f) }
 
             var imageUri by remember {
                 mutableStateOf<Uri?>(null)
@@ -283,92 +286,217 @@ class MainActivity : ComponentActivity() {
                 }
             )
 
-            var initSize = Size(0f,0f)
-            val rotation = remember { Animatable(0f) }
-            val offsetY = remember { Animatable(0f) }
-            val scale = remember { Animatable(1f) }
-            var initImageSize by remember { mutableStateOf(false) }
-            val zoomState = rememberZoomState(screenWidth = screenWidth)
             val scope = rememberCoroutineScope()
 
-            val test = VelocityTracker()
-
-            val picture = remember{ Picture()}
-
             Surface(modifier = Modifier.fillMaxSize()) {
-                //val photoState = rememberPhotoState()
-                Box(
-                    modifier = Modifier
-                ) {
-                    imageUri?.let {
-                        Box(modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xffffffff))
-                        ){
-                            AsyncImage(
-                                model = it,
-                                contentDescription = "",
-                                onSuccess = {
-                                    val size = it.painter.intrinsicSize
-                                    zoomState.setContentSize(size)
-                                    if(size.width < screenWidth){
-                                        scope.launch {
-                                            zoomState.setScale(screenWidth/size.width)
-                                        }
-                                    }
 
-                                    if(size.height < screenWidth){
-                                        scope.launch {
-                                            zoomState.setScale(screenWidth/size.height)
-                                        }
-                                    }
-                                },
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Button(onClick = {
+                        launcher.launch(
+                            Intent(
+                                Intent.ACTION_PICK,
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            )
+                        )
+                    }) {
+                        Text(text = "asdf")
+                    }
+                }
+
+                imageUri?.let {
+                    val rotation = remember { Animatable(0f) }
+                    val zoomState = rememberZoomState(screenWidth = screenWidth)
+
+                    CustomBottomSheetDialog(
+                        onDismissRequest = {
+                            imageUri = null
+                        },
+                        properties = BottomSheetDialogProperties(
+                            navigationBarProperties = NavigationBarProperties(
+                                color = Color.White
+                            ),
+                            behaviorProperties = BottomSheetBehaviorProperties(
+                                state = BottomSheetBehaviorProperties.State.Expanded,
+                                skipCollapsed = true,
+                                isDraggable = true
+                            )
+                        )
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(top = 24.dp),
+                            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                        ) {
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .zoomable(zoomState)
-                                    .rotate(rotation.value)
-                            )
-
-                            Button(
-                                onClick = {
-                                    if(!rotation.isRunning){
-                                        scope.launch {
-                                            rotation.animateTo(rotation.value + 90f)
-                                        }
-                                        scope.launch {
-                                            val preSize = zoomState.getContentSize()
-                                            val newSize = Size(preSize.height,preSize.width)
-
-                                            zoomState.reset(newSize)
-                                        }
+                                    .background(Color(0xff000000))
+                                    .onGloballyPositioned {
+                                        screenHeight = it.size.height.toFloat()
                                     }
-                                },
-                                modifier = Modifier.align(Center)
                             ) {
-                                Text(text = "asdf")
-                            }
+                                AsyncImage(
+                                    model = it,
+                                    contentDescription = "",
+                                    onSuccess = {
+                                        val size = if(it.result.isSampled){
+                                            it.painter.intrinsicSize
+                                        }else{
+                                            if(it.painter.intrinsicSize.width <= it.painter.intrinsicSize.height){
+                                                it.painter.intrinsicSize * (screenHeight/it.painter.intrinsicSize.height)
+                                            }else{
+                                                it.painter.intrinsicSize * (screenWidth/it.painter.intrinsicSize.width)
+                                            }
+                                        }
 
-                            Spacer(modifier = Modifier.fillMaxWidth().height(qwe.dp).align(Center).background(Color(0x22000000)))
-                        }
-                    }?:run{
-                        Button(onClick = {
-                            launcher.launch(
-                                Intent(
-                                    Intent.ACTION_PICK,
-                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                                        zoomState.setContentSize(size)
+
+                                        when{
+                                            size.width < screenWidth -> {
+                                                scope.launch {
+                                                    zoomState.setScale(screenWidth / size.width)
+                                                }
+                                            }
+
+                                            size.height < screenWidth -> {
+                                                scope.launch {
+                                                    zoomState.setScale(screenWidth / size.height)
+                                                }
+                                            }
+
+                                            else -> {
+                                                scope.launch {
+                                                    zoomState.setScale(1f)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .zoomable(zoomState)
+                                        .rotate(rotation.value)
                                 )
-                            )
-                        }) {
-                            Text(text = "asdf")
+
+                                Canvas(modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
+                                    }
+                                ){
+                                    drawRect(
+                                        color = Color.Black.copy(alpha = 0.8f)
+                                    )
+                                    drawCircle(
+                                        color = Color.Transparent,
+                                        style = Fill,
+                                        blendMode = BlendMode.Clear
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(BottomCenter)
+                                        .padding(bottom = 86.dp)
+                                        .width(68.dp)
+                                        .height(34.dp)
+                                        .border(
+                                            BorderStroke(1.dp, Color(0x80dddddd)),
+                                            RoundedCornerShape(3.dp)
+                                        )
+                                        .clickable {
+                                            if (!rotation.isRunning) {
+                                                scope.launch {
+                                                    rotation.animateTo(rotation.value + 90f)
+                                                }
+                                                scope.launch {
+                                                    val preSize = zoomState.getContentSize()
+                                                    val newSize =
+                                                        Size(preSize.height, preSize.width)
+
+                                                    zoomState.reset(newSize)
+                                                }
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = "회전",
+                                        style = TextStyle(
+                                            fontSize = 13.dp.textSp,
+                                            fontWeight = FontWeight.W700,
+                                            color = Color(0xffffffff),
+                                            fontFamily = Font.nanumSquareRoundFont
+                                        ),
+                                        modifier = Modifier.align(Center)
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(54.dp)
+                                        .background(Color(0xffffffff))
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    Text(
+                                        text = "자르기 및 회전",
+                                        style = TextStyle(
+                                            fontSize = 17.dp.textSp,
+                                            fontWeight = FontWeight.W700,
+                                            color = Color(0xff111111),
+                                            fontFamily = Font.nanumSquareRoundFont
+                                        ),
+                                        modifier = Modifier.align(Center)
+                                    )
+
+                                    Image(
+                                        painter = painterResource(id = R.drawable.btn_del),
+                                        contentDescription = "",
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .align(CenterEnd)
+                                            .padding(10.dp)
+                                            .clickable {
+                                                imageUri = null
+                                            }
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .background(Color(0xffff4857))
+                                        .align(BottomCenter)
+                                        .clickable {
+
+                                        }
+                                ) {
+                                    Text(
+                                        text = "확인",
+                                        style = TextStyle(
+                                            fontSize = 16.dp.textSp,
+                                            fontWeight = FontWeight.W700,
+                                            color = Color(0xffffffff),
+                                            fontFamily = Font.nanumSquareRoundFont
+                                        ),
+                                        modifier = Modifier.align(Center)
+                                    )
+                                }
+                            }
                         }
                     }
-
                 }
             }
         }
     }
 }
 
+fun DrawScope.getBlurBrush(): Fill {
+    return androidx.compose.ui.graphics.drawscope.Fill
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

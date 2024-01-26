@@ -33,19 +33,16 @@ import kotlin.math.abs
  */
 @Stable
 class ZoomState(
-    @FloatRange(from = 1.0) private val maxScale: Float = 5f,
     private var contentSize: Size = Size.Zero,
     private val velocityDecay: DecayAnimationSpec<Float> = exponentialDecay(),
     private val screenWidth : Float
 ) {
-    init {
-        require(maxScale >= 1.0f) { "maxScale must be at least 1.0." }
-    }
 
     private var _scale = Animatable(1f).apply {
-        updateBounds(0.9f, maxScale)
+        updateBounds(0.9f, 100f)
     }
 
+    private var maxScale = 1f
     var minScale = 1f
 
     /**
@@ -115,7 +112,6 @@ class ZoomState(
      * Reset the scale and the offsets.
      */
     suspend fun reset(size : Size) = coroutineScope {
-        log("qweqwe",size.width)
         launch { _scale.snapTo(minScale) }
         launch { _offsetX.snapTo(0f) }
         launch { _offsetY.snapTo(0f) }
@@ -138,34 +134,27 @@ class ZoomState(
     suspend fun setScale(scale : Float){
         _scale.snapTo(scale)
         minScale = scale
+        maxScale = scale * 5f
     }
 
     internal fun canConsumeGesture(pan: Offset, zoom: Float): Boolean {
         return shouldConsumeEvent ?: run {
             var consume = true
-            if (zoom == 1f) { // One finger gesture
-                if (scale == 1f) {  // Not zoomed
-                    consume = false
-                } else {
-                    val ratio = (abs(pan.x) / abs(pan.y))
-                    if (ratio > 3) {   // Horizontal drag
-                        if ((pan.x < 0) && (_offsetX.value == _offsetX.lowerBound)) {
-                            // Drag R to L when right edge of the content is shown.
-                            consume = false
-                        }
-                        if ((pan.x > 0) && (_offsetX.value == _offsetX.upperBound)) {
-                            // Drag L to R when left edge of the content is shown.
-                            consume = false
-                        }
-                    } else if (ratio < 0.33) { // Vertical drag
-                        if ((pan.y < 0) && (_offsetY.value == _offsetY.lowerBound)) {
-                            // Drag bottom to top when bottom edge of the content is shown.
-                            consume = false
-                        }
-                        if ((pan.y > 0) && (_offsetY.value == _offsetY.upperBound)) {
-                            // Drag top to bottom when top edge of the content is shown.
-                            consume = false
-                        }
+            if (zoom == 1f) {
+                val ratio = (abs(pan.x) / abs(pan.y))
+                if (ratio > 3) {
+                    if ((pan.x < 0) && (_offsetX.value == _offsetX.lowerBound)) {
+                        consume = false
+                    }
+                    if ((pan.x > 0) && (_offsetX.value == _offsetX.upperBound)) {
+                        consume = false
+                    }
+                } else if (ratio < 0.33) {
+                    if ((pan.y < 0) && (_offsetY.value == _offsetY.lowerBound)) {
+                        consume = false
+                    }
+                    if ((pan.y > 0) && (_offsetY.value == _offsetY.upperBound)) {
+                        consume = false
                     }
                 }
             }
@@ -252,10 +241,9 @@ class ZoomState(
         val deltaWidth = newSize.width - size.width
         val deltaHeight = newSize.height - size.height
 
-        // Position with the origin at the left top corner of the content.
         val xInContent = position.x - offsetX + (size.width - layoutSize.width) * 0.5f
         val yInContent = position.y - offsetY + (size.height - layoutSize.height) * 0.5f
-        // Amount of offset change required to zoom around the position.
+
         val deltaX = (deltaWidth * 0.5f) - (deltaWidth * xInContent / size.width)
         val deltaY = (deltaHeight * 0.5f) - (deltaHeight * yInContent / size.height)
 
@@ -271,6 +259,7 @@ class ZoomState(
         val newSize = fitContentSize * newScale
         val boundX = max((newSize.width - layoutSize.width), 0f) * 0.5f
         val boundY = max((newSize.height - screenWidth), 0f) * 0.5f
+
         return Rect(-boundX, -boundY, boundX, boundY)
     }
 
@@ -404,10 +393,9 @@ class ZoomState(
  */
 @Composable
 fun rememberZoomState(
-    @FloatRange(from = 1.0) maxScale: Float = 5f,
     contentSize: Size = Size.Zero,
     velocityDecay: DecayAnimationSpec<Float> = exponentialDecay(),
     screenWidth : Float
 ) = remember {
-    ZoomState(maxScale, contentSize, velocityDecay, screenWidth)
+    ZoomState(contentSize, velocityDecay, screenWidth)
 }
