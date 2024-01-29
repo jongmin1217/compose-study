@@ -2,12 +2,19 @@ package com.example.compose_study.main
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Picture
 import android.graphics.RectF
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.Typeface
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
@@ -59,14 +66,18 @@ import androidx.compose.ui.Alignment.Companion.Start
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopCenter
 import androidx.compose.ui.Alignment.Companion.TopStart
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -75,6 +86,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -104,13 +116,17 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.onebone.toolbar.CollapsingToolbarScaffold
 import me.onebone.toolbar.ScrollStrategy
 import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
 import soup.compose.photo.ExperimentalPhotoApi
 import soup.compose.photo.PhotoBox
 import soup.compose.photo.rememberPhotoState
+import java.io.IOException
+import java.io.InputStream
 import java.net.URI
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -268,9 +284,12 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
 
-            val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
-            var screenHeight by remember{ mutableStateOf(0f) }
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
+            var screenHeight by remember { mutableStateOf(0f) }
+            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
+            val test = WindowInsets.Companion.captionBar.asPaddingValues()
+            val test2 = WindowInsets.Companion.statusBars.asPaddingValues()
             var imageUri by remember {
                 mutableStateOf<Uri?>(null)
             }
@@ -303,6 +322,9 @@ class MainActivity : ComponentActivity() {
                     }) {
                         Text(text = "asdf")
                     }
+
+                    AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier.fillMaxWidth().align(
+                        Center), contentScale = ContentScale.FillWidth)
                 }
 
                 imageUri?.let {
@@ -330,55 +352,70 @@ class MainActivity : ComponentActivity() {
                                 .padding(top = 24.dp),
                             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color(0xff000000))
-                                    .onGloballyPositioned {
-                                        screenHeight = it.size.height.toFloat()
+                            Box(modifier = Modifier
+                                .fillMaxSize()
+                            ){
+
+                                BlurImage(
+                                    screenWidth,screenHeight
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color(0xff000000))
+                                            .onGloballyPositioned {
+                                                screenHeight = it.size.height.toFloat()
+                                            }
+                                    ) {
+
+
+                                        AsyncImage(
+                                            model = it,
+                                            contentDescription = "",
+                                            onSuccess = {
+                                                val size = if (it.result.isSampled) {
+                                                    it.painter.intrinsicSize
+                                                } else {
+                                                    if (it.painter.intrinsicSize.width >= it.painter.intrinsicSize.height) {
+                                                        it.painter.intrinsicSize * (screenWidth / it.painter.intrinsicSize.width)
+                                                    } else {
+                                                        it.painter.intrinsicSize * (screenHeight / it.painter.intrinsicSize.height)
+                                                    }
+                                                }
+
+                                                zoomState.setContentSize(size)
+                                                when {
+                                                    size.width < screenWidth -> {
+                                                        scope.launch {
+                                                            zoomState.setScale(screenWidth / size.width)
+                                                        }
+                                                    }
+
+                                                    size.height < screenWidth -> {
+                                                        scope.launch {
+                                                            zoomState.setScale(screenWidth / size.height)
+                                                        }
+                                                    }
+
+                                                    else -> {
+                                                        scope.launch {
+                                                            zoomState.setScale(1f)
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .zoomable(zoomState)
+                                                .rotate(rotation.value)
+                                                .onGloballyPositioned {
+                                                    log("qweqwe",it.positionInWindow().x,it.positionInWindow().y)
+                                                }
+                                        )
+
                                     }
-                            ) {
-                                AsyncImage(
-                                    model = it,
-                                    contentDescription = "",
-                                    onSuccess = {
-                                        val size = if(it.result.isSampled){
-                                            it.painter.intrinsicSize
-                                        }else{
-                                            if(it.painter.intrinsicSize.width <= it.painter.intrinsicSize.height){
-                                                it.painter.intrinsicSize * (screenHeight/it.painter.intrinsicSize.height)
-                                            }else{
-                                                it.painter.intrinsicSize * (screenWidth/it.painter.intrinsicSize.width)
-                                            }
-                                        }
+                                }
 
-                                        zoomState.setContentSize(size)
-
-                                        when{
-                                            size.width < screenWidth -> {
-                                                scope.launch {
-                                                    zoomState.setScale(screenWidth / size.width)
-                                                }
-                                            }
-
-                                            size.height < screenWidth -> {
-                                                scope.launch {
-                                                    zoomState.setScale(screenWidth / size.height)
-                                                }
-                                            }
-
-                                            else -> {
-                                                scope.launch {
-                                                    zoomState.setScale(1f)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .zoomable(zoomState)
-                                        .rotate(rotation.value)
-                                )
 
                                 Canvas(modifier = Modifier
                                     .fillMaxSize()
@@ -387,13 +424,15 @@ class MainActivity : ComponentActivity() {
                                     }
                                 ){
                                     drawRect(
-                                        color = Color.Black.copy(alpha = 0.8f)
+                                        color = Color.Black.copy(alpha = 0.8f),
                                     )
                                     drawCircle(
                                         color = Color.Transparent,
-                                        style = Fill,
-                                        blendMode = BlendMode.Clear
-                                    )
+                                        radius = (screenWidth/2) - 15.dp.toPx(),
+                                        center = Offset(screenWidth/2,screenHeight/2),
+                                        blendMode = BlendMode.Clear,
+
+                                        )
                                 }
 
                                 Box(
@@ -471,7 +510,25 @@ class MainActivity : ComponentActivity() {
                                         .background(Color(0xffff4857))
                                         .align(BottomCenter)
                                         .clickable {
-
+                                            scope.launch {
+                                                bitmap = cropImageToPixels(
+                                                    context,
+                                                    it,
+                                                    CropParams(
+                                                        zoomState.offsetX,
+                                                        zoomState.offsetY,
+                                                        (zoomState.scale+1) - zoomState.minScale,
+                                                        zoomState.getContentSize()
+                                                    )
+                                                )
+                                                log("qweqwe",CropParams(
+                                                    zoomState.offsetX,
+                                                    zoomState.offsetY,
+                                                    (zoomState.scale+1) - zoomState.minScale,
+                                                    zoomState.getContentSize()
+                                                ))
+                                                //imageUri = null
+                                            }
                                         }
                                 ) {
                                     Text(
@@ -485,6 +542,7 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.align(Center)
                                     )
                                 }
+
                             }
                         }
                     }
@@ -494,9 +552,161 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-fun DrawScope.getBlurBrush(): Fill {
-    return androidx.compose.ui.graphics.drawscope.Fill
+suspend fun cropImageToPixels(context: Context, imageUri: Uri, params : CropParams): Bitmap? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val contentResolver = context.contentResolver
+            val inputStream = contentResolver.openInputStream(imageUri)
+
+            inputStream?.let {
+                val options = BitmapFactory.Options()
+                options.inPreferredConfig = Bitmap.Config.ARGB_8888
+                val originalBitmap = BitmapFactory.decodeStream(inputStream, null, options)
+
+                val orientation = getOrientationFromExif(context,imageUri)
+
+                originalBitmap?.let {
+                    val rotateBitmap = rotateBitmap(originalBitmap, orientation)
+
+                    val bitmapScale = rotateBitmap.width / params.originalSize.width
+//
+//                    val center = rotateBitmap.width/2 to rotateBitmap.height/2
+
+                    val qwe = Bitmap.createBitmap(
+                        rotateBitmap,
+                        0,
+                        0,
+                        ((params.originalSize.width * bitmapScale) / params.scale).toInt(),
+                        ((params.originalSize.width * bitmapScale) / params.scale).toInt()
+                    )
+//
+//                    val pixels = IntArray(qwe.width * qwe.height)
+//                    qwe.getPixels(pixels, 0, qwe.width, 0, 0, qwe.width, qwe.height)
+//
+                    inputStream.close()
+
+                    qwe
+                }
+
+//                val croppedBitmap = Bitmap.createBitmap(
+//                    originalBitmap,
+//                    cropRect.left.toInt(),
+//                    cropRect.top.toInt(),
+//                    cropRect.width.toInt(),
+//                    cropRect.height.toInt()
+//                )
+//
+//                val pixels = IntArray(croppedBitmap.width * croppedBitmap.height)
+//                croppedBitmap.getPixels(pixels, 0, croppedBitmap.width, 0, 0, croppedBitmap.width, croppedBitmap.height)
+//
+//                inputStream?.close()
+//
+//                pixels
+            }?:run{
+                null
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }
+data class CropParams(val offsetX: Float, val offsetY: Float, val scale: Float, val originalSize: Size)
+fun calculateCropArea(cropParams: CropParams): Rect {
+    val originalWidth = cropParams.originalSize.width
+    val originalHeight = cropParams.originalSize.height
+
+    // Calculate the scaled dimensions
+    val scaledWidth = (originalWidth * cropParams.scale).toInt()
+    val scaledHeight = (originalHeight * cropParams.scale).toInt()
+
+    // Calculate the crop area position after scaling
+    val scaledOffsetX = cropParams.offsetX * cropParams.scale
+    val scaledOffsetY = cropParams.offsetY * cropParams.scale
+
+    // Calculate the left, top, right, and bottom coordinates of the crop area
+    val left = max(0f, scaledOffsetX).toInt()
+    val top = max(0f, scaledOffsetY).toInt()
+    val right = min(scaledWidth, scaledOffsetX.toInt() + scaledWidth)
+    val bottom = min(scaledHeight, scaledOffsetY.toInt() + scaledHeight)
+
+    // Calculate the width and height of the crop area
+    val width = max(0, right - left)
+    val height = max(0, bottom - top)
+
+    return Rect(left.toFloat(), top.toFloat(), (left + width).toFloat(), (top + height).toFloat())
+}
+
+
+private fun getOrientationFromExif(context: Context,imageUri: Uri): Int {
+    var inputStream: InputStream? = null
+    try {
+        // Open an input stream from the content resolver
+        inputStream = context.contentResolver.openInputStream(imageUri)
+
+        // Check if the input stream is not null
+        if (inputStream != null) {
+            // Get the orientation from Exif data
+            val exifInterface = ExifInterface(inputStream)
+            return exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+        }
+    } catch (e: IOException) {
+        e.printStackTrace()
+    } finally {
+        // Close the input stream
+        inputStream?.close()
+    }
+
+    return ExifInterface.ORIENTATION_UNDEFINED
+}
+
+private fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
+    val matrix = Matrix()
+
+    when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+        ExifInterface.ORIENTATION_NORMAL -> return bitmap
+    }
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+}
+
+@Composable
+fun BlurImage(
+    screenWidth : Float,
+    screenHeight : Float,
+    content: @Composable () -> Unit
+) {
+    Box {
+        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(10.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                .drawWithContent {
+                    with(drawContext.canvas.nativeCanvas) {
+                        val checkPoint = saveLayer(null, null)
+
+                        drawContent()
+
+                        drawCircle(
+                            color = Color.Transparent,
+                            radius = (screenWidth / 2) - 15.dp.toPx(),
+                            center = Offset(screenWidth / 2, screenHeight / 2),
+                            blendMode = BlendMode.Clear
+                        )
+                        restoreToCount(checkPoint)
+                    }
+                }
+
+        ) {
+            content()
+        }
+    }
+}
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

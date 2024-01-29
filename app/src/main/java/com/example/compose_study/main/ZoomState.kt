@@ -250,6 +250,7 @@ class ZoomState(
         val x = offsetX + pan.x + deltaX
         val y = offsetY + pan.y + deltaY
 
+
         return Offset(x, y)
     }
 
