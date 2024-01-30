@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -221,14 +223,19 @@ fun Modifier.zoomable(
     }
 ) {
     val scope = rememberCoroutineScope()
+    var hideJob : Job? = null
     Modifier
         .onSizeChanged { size ->
             zoomState.setLayoutSize(size.toSize())
         }
         .pointerInput(zoomState) {
             detectTransformGestures(
-                onGestureStart = { zoomState.startGesture() },
+                onGestureStart = {
+                    zoomState.startGesture()
+                },
                 onGesture = { centroid, pan, zoom, timeMillis ->
+                    hideJob?.cancel()
+                    zoomState.setDragging(true)
                     val canConsume = zoomState.canConsumeGesture(pan = pan, zoom = zoom)
                     if (canConsume) {
                         scope.launch {
@@ -245,6 +252,10 @@ fun Modifier.zoomable(
                 onGestureEnd = {
                     scope.launch {
                         zoomState.endGesture()
+                    }
+                    hideJob = scope.launch {
+                        delay(1000)
+                        zoomState.setDragging(false)
                     }
                 },
                 onTap = onTap,

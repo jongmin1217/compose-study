@@ -112,10 +112,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.*
+import androidx.core.graphics.scale
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
+import com.kpstv.compose.kapture.attachController
+import com.kpstv.compose.kapture.rememberScreenshotController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -273,9 +276,7 @@ class MainActivity : ComponentActivity() {
     )
 
 
-    private val velocityTracker = VelocityTracker()
 
-    @OptIn(ExperimentalFoundationApi::class, ExperimentalPhotoApi::class)
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -287,6 +288,7 @@ class MainActivity : ComponentActivity() {
             val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
             var screenHeight by remember { mutableStateOf(0f) }
             var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+            var isVisibleBaseLine by remember { mutableStateOf(false) }
 
             val test = WindowInsets.Companion.captionBar.asPaddingValues()
             val test2 = WindowInsets.Companion.statusBars.asPaddingValues()
@@ -306,6 +308,10 @@ class MainActivity : ComponentActivity() {
             )
 
             val scope = rememberCoroutineScope()
+            val screenshotState = rememberScreenshotController()
+
+
+
 
             Surface(modifier = Modifier.fillMaxSize()) {
 
@@ -323,14 +329,26 @@ class MainActivity : ComponentActivity() {
                         Text(text = "asdf")
                     }
 
-                    AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier.fillMaxWidth().align(
-                        Center), contentScale = ContentScale.FillWidth)
+                    bitmap?.let {
+
+                        AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier
+                            .fillMaxWidth()
+                            .align(
+                                Center
+                            ), contentScale = ContentScale.FillWidth)
+                    }
+
                 }
 
                 imageUri?.let {
                     val rotation = remember { Animatable(0f) }
                     val zoomState = rememberZoomState(screenWidth = screenWidth)
 
+                    LaunchedEffect(Unit){
+                        zoomState.isDragging.collect{
+                            isVisibleBaseLine = it
+                        }
+                    }
                     CustomBottomSheetDialog(
                         onDismissRequest = {
                             imageUri = null
@@ -366,6 +384,7 @@ class MainActivity : ComponentActivity() {
                                             .onGloballyPositioned {
                                                 screenHeight = it.size.height.toFloat()
                                             }
+
                                     ) {
 
 
@@ -408,9 +427,6 @@ class MainActivity : ComponentActivity() {
                                                 .fillMaxSize()
                                                 .zoomable(zoomState)
                                                 .rotate(rotation.value)
-                                                .onGloballyPositioned {
-                                                    log("qweqwe",it.positionInWindow().x,it.positionInWindow().y)
-                                                }
                                         )
 
                                     }
@@ -431,8 +447,76 @@ class MainActivity : ComponentActivity() {
                                         radius = (screenWidth/2) - 15.dp.toPx(),
                                         center = Offset(screenWidth/2,screenHeight/2),
                                         blendMode = BlendMode.Clear,
+                                    )
+                                }
 
+                                AnimatedVisibility(
+                                    visible = isVisibleBaseLine,
+                                    enter = fadeIn(),
+                                    exit = fadeOut()
+                                ) {
+                                    Canvas(modifier = Modifier
+                                        .fillMaxSize()
+                                    ){
+                                        val offsetList = listOf(
+                                            Offset(15.dp.toPx(),screenHeight/2 - ((screenWidth/2) - 15.dp.toPx())),
+                                            Offset(screenWidth - 15.dp.toPx(),screenHeight/2 - ((screenWidth/2) - 15.dp.toPx())),
+                                            Offset(screenWidth - 15.dp.toPx(),screenHeight/2 + ((screenWidth/2) - 15.dp.toPx())),
+                                            Offset(15.dp.toPx(),screenHeight/2 + ((screenWidth/2) - 15.dp.toPx()))
                                         )
+
+                                        val zxc = (screenWidth - 30.dp.toPx())/3
+
+                                        for(i in 0..3){
+                                            drawLine(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                start = offsetList[i],
+                                                end = offsetList[if(i == 3) 0 else i+1],
+                                                strokeWidth = 1.dp.toPx()
+                                            )
+
+                                            if(i == 0){
+                                                for(j in 0..1){
+                                                    drawLine(
+                                                        color = Color.White.copy(alpha = 0.5f),
+                                                        start = offsetList[i].copy(y = offsetList[i].y + (zxc * (j+1))),
+                                                        end = offsetList[i+1].copy(y = offsetList[i].y + (zxc * (j+1))),
+                                                        strokeWidth = 1.dp.toPx()
+                                                    )
+                                                }
+                                            }else if(i == 3){
+                                                for(j in 0..1){
+                                                    drawLine(
+                                                        color = Color.White.copy(alpha = 0.5f),
+                                                        start = offsetList[i].copy(x = offsetList[i].x + (zxc * (j+1))),
+                                                        end = offsetList[0].copy(x = offsetList[i].x + (zxc * (j+1))),
+                                                        strokeWidth = 1.dp.toPx()
+                                                    )
+                                                }
+                                            }
+
+                                            val resourceId = when(i){
+                                                0 -> R.drawable.img_top_left
+                                                1 -> R.drawable.img_top_right
+                                                2 -> R.drawable.img_bottom_right
+                                                else -> R.drawable.img_bottom_left
+                                            }
+
+                                            val resourceBitmap =
+                                                BitmapFactory.decodeResource(resources,resourceId)
+                                                    .scale(20.dp.toPx().toInt(),20.dp.toPx().toInt())
+                                            drawImage(
+                                                resourceBitmap.asImageBitmap(),
+                                                when(i){
+                                                    1 -> offsetList[i].copy(x = offsetList[i].x - 20.dp.toPx())
+                                                    2 -> offsetList[i].copy(x = offsetList[i].x - 20.dp.toPx(),y = offsetList[i].y - 20.dp.toPx())
+                                                    3 -> offsetList[i].copy(y = offsetList[i].y - 20.dp.toPx())
+                                                    else -> offsetList[i]
+                                                }
+
+                                            )
+                                        }
+                                    }
                                 }
 
                                 Box(
@@ -511,23 +595,9 @@ class MainActivity : ComponentActivity() {
                                         .align(BottomCenter)
                                         .clickable {
                                             scope.launch {
-                                                bitmap = cropImageToPixels(
-                                                    context,
-                                                    it,
-                                                    CropParams(
-                                                        zoomState.offsetX,
-                                                        zoomState.offsetY,
-                                                        (zoomState.scale+1) - zoomState.minScale,
-                                                        zoomState.getContentSize()
-                                                    )
-                                                )
-                                                log("qweqwe",CropParams(
-                                                    zoomState.offsetX,
-                                                    zoomState.offsetY,
-                                                    (zoomState.scale+1) - zoomState.minScale,
-                                                    zoomState.getContentSize()
-                                                ))
-                                                //imageUri = null
+                                                val asd = screenshotState.captureToBitmap()
+                                                bitmap = asd.getOrNull()
+                                                log("qweqwe", test)
                                             }
                                         }
                                 ) {
@@ -681,6 +751,7 @@ fun BlurImage(
 ) {
     Box {
         content()
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1217,111 +1288,111 @@ fun GaugeSpeechBubble(
     }
 
 }
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
-@Composable
-fun PagerTest() {
-    val scope = rememberCoroutineScope()
-    val state = rememberPagerState(initialPage = 500)
-    val width = LocalConfiguration.current.screenWidthDp
-
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        HorizontalPager(
-            pageCount = 1000,
-            state = state,
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            val page = it % 7
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                val image = painterResource(
-                    id = when (page) {
-                        0 -> R.drawable.image_1
-                        1 -> R.drawable.image_2
-                        2 -> R.drawable.image_3
-                        3 -> R.drawable.image_4
-                        4 -> R.drawable.image_5
-                        5 -> R.drawable.image_6
-                        else -> R.drawable.image_7
-                    }
-                )
-
-                Image(
-                    painter = image,
-                    contentDescription = "",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp)
-                        .slidePager(it, state)
-                        .align(TopCenter),
-                    contentScale = ContentScale.Companion.Crop
-                )
-
-                Text(
-                    text = "타이틀 입니다. $page",
-                    style = TextStyle(
-                        fontSize = 20.dp.textSp,
-                        color = Color(0xffffffff),
-                        fontWeight = FontWeight.W700
-                    ),
-                    modifier = Modifier
-                        .align(
-                            BottomCenter
-                        )
-                        .padding(bottom = 70.dp)
-                        .graphicsLayer {
-
-                            val pageOffset = state.offsetForPage(it)
-                            translationX = -(width * pageOffset)
-                        }
-                )
-
-                Text(
-                    text = "서브정보 입니다. $page",
-                    style = TextStyle(
-                        fontSize = 14.dp.textSp,
-                        color = Color(0xffffffff),
-                        fontWeight = FontWeight.W700
-                    ),
-                    modifier = Modifier
-                        .align(
-                            BottomCenter
-                        )
-                        .padding(bottom = 40.dp)
-                )
-            }
-
-
-        }
-
-        Spacer(modifier = Modifier.height(50.dp))
-
-        Row {
-            Button(onClick = {
-                scope.launch {
-                    state.animateScrollToPage(state.currentPage - 1)
-                }
-            }) {
-                Text(text = "-")
-            }
-
-            Button(onClick = {
-                scope.launch {
-                    state.animateScrollToPage(state.currentPage + 1)
-                }
-            }) {
-                Text(text = "+")
-            }
-        }
-    }
-
-}
+//
+//@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+//@Composable
+//fun PagerTest() {
+//    val scope = rememberCoroutineScope()
+//    val state = rememberPagerState(initialPage = 500)
+//    val width = LocalConfiguration.current.screenWidthDp
+//
+//    Column(
+//        modifier = Modifier.fillMaxWidth()
+//    ) {
+//        HorizontalPager(
+//            pageCount = 1000,
+//            state = state,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//        ) {
+//            val page = it % 7
+//
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//            ) {
+//                val image = painterResource(
+//                    id = when (page) {
+//                        0 -> R.drawable.image_1
+//                        1 -> R.drawable.image_2
+//                        2 -> R.drawable.image_3
+//                        3 -> R.drawable.image_4
+//                        4 -> R.drawable.image_5
+//                        5 -> R.drawable.image_6
+//                        else -> R.drawable.image_7
+//                    }
+//                )
+//
+//                Image(
+//                    painter = image,
+//                    contentDescription = "",
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(400.dp)
+//                        .slidePager(it, state)
+//                        .align(TopCenter),
+//                    contentScale = ContentScale.Companion.Crop
+//                )
+//
+//                Text(
+//                    text = "타이틀 입니다. $page",
+//                    style = TextStyle(
+//                        fontSize = 20.dp.textSp,
+//                        color = Color(0xffffffff),
+//                        fontWeight = FontWeight.W700
+//                    ),
+//                    modifier = Modifier
+//                        .align(
+//                            BottomCenter
+//                        )
+//                        .padding(bottom = 70.dp)
+//                        .graphicsLayer {
+//
+//                            val pageOffset = state.offsetForPage(it)
+//                            translationX = -(width * pageOffset)
+//                        }
+//                )
+//
+//                Text(
+//                    text = "서브정보 입니다. $page",
+//                    style = TextStyle(
+//                        fontSize = 14.dp.textSp,
+//                        color = Color(0xffffffff),
+//                        fontWeight = FontWeight.W700
+//                    ),
+//                    modifier = Modifier
+//                        .align(
+//                            BottomCenter
+//                        )
+//                        .padding(bottom = 40.dp)
+//                )
+//            }
+//
+//
+//        }
+//
+//        Spacer(modifier = Modifier.height(50.dp))
+//
+//        Row {
+//            Button(onClick = {
+//                scope.launch {
+//                    state.animateScrollToPage(state.currentPage - 1)
+//                }
+//            }) {
+//                Text(text = "-")
+//            }
+//
+//            Button(onClick = {
+//                scope.launch {
+//                    state.animateScrollToPage(state.currentPage + 1)
+//                }
+//            }) {
+//                Text(text = "+")
+//            }
+//        }
+//    }
+//
+//}
 
 @SuppressLint("UnnecessaryComposedModifier")
 @OptIn(ExperimentalFoundationApi::class)

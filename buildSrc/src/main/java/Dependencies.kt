@@ -58,6 +58,7 @@ object Versions{
     const val coil = "2.4.0"
 
     const val photo_view = "1.0.1"
+    const val screenshot = "1.0.0"
 
 }
 
@@ -142,6 +143,7 @@ object Libs{
     const val coil = "io.coil-kt:coil-compose:${Versions.coil}"
 
     const val photo_view = "io.github.fornewid:photo-compose:${Versions.photo_view}"
+    const val screenshot = "io.github.kaustubhpatange:kapture:${Versions.screenshot}"
 }
 
 object TestLibs{

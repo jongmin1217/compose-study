@@ -122,4 +122,5 @@ dependencies {
     implementation(Libs.coil)
 
     implementation(Libs.photo_view)
+    implementation(Libs.screenshot)
 }

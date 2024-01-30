@@ -19,6 +19,8 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.lang.Float.max
 import kotlin.math.abs
@@ -37,6 +39,9 @@ class ZoomState(
     private val velocityDecay: DecayAnimationSpec<Float> = exponentialDecay(),
     private val screenWidth : Float
 ) {
+
+    private val _isDragging = MutableStateFlow(false)
+    val isDragging = _isDragging.asStateFlow()
 
     private var _scale = Animatable(1f).apply {
         updateBounds(0.9f, 100f)
@@ -89,6 +94,10 @@ class ZoomState(
     fun setContentSize(size: Size) {
         contentSize = size
         updateFitContentSize()
+    }
+
+    fun setDragging(isDragging : Boolean){
+        _isDragging.value = isDragging
     }
 
     fun getContentSize() = contentSize
