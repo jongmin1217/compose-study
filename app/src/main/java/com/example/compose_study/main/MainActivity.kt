@@ -308,8 +308,9 @@ class MainActivity : ComponentActivity() {
             )
 
             val scope = rememberCoroutineScope()
-            val screenshotState = rememberScreenshotController()
-
+            var boxScope by remember {
+                mutableStateOf<BoxWithConstraintsScope?>(null)
+            }
 
 
 
@@ -377,7 +378,7 @@ class MainActivity : ComponentActivity() {
                                 BlurImage(
                                     screenWidth,screenHeight
                                 ) {
-                                    Box(
+                                    BoxWithConstraints(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(Color(0xff000000))
@@ -386,7 +387,7 @@ class MainActivity : ComponentActivity() {
                                             }
 
                                     ) {
-
+                                        boxScope = this
 
                                         AsyncImage(
                                             model = it,
@@ -427,6 +428,9 @@ class MainActivity : ComponentActivity() {
                                                 .fillMaxSize()
                                                 .zoomable(zoomState)
                                                 .rotate(rotation.value)
+                                                .onGloballyPositioned {
+                                                    log("qweqwe",it.positionInWindow(),(screenHeight - screenWidth)/2)
+                                                }
                                         )
 
                                     }
@@ -595,10 +599,50 @@ class MainActivity : ComponentActivity() {
                                         .align(BottomCenter)
                                         .clickable {
                                             scope.launch {
-                                                val asd = screenshotState.captureToBitmap()
-                                                bitmap = asd.getOrNull()
-                                                log("qweqwe", test)
+                                                createBitmapFromUri(context, it)?.let {
+                                                    boxScope?.let { boxScope->
+                                                        val bitmapWidth = it.width
+                                                        val bitmapHeight = it.height
+
+                                                        val x = bitmapWidth/2 - zoomState.offsetX
+                                                        val y = bitmapHeight/2 - zoomState.offsetY
+                                                        val imageSize = zoomState.getContentSize()
+                                                        val zoom = bitmapWidth/imageSize.width
+
+                                                        val pixel = screenWidth * zoom
+                                                        //log("qweqwe",zoomState.offsetX,zoomState.offsetY,screenWidth*zoomState.scale)
+
+
+
+//
+//                                                        val center = IntOffset(bitmapWidth,bitmapHeight)
+//
+//                                                        val (boxWidth: Int, boxHeight: Int) = boxScope.getParentSize(bitmapWidth, bitmapHeight)
+//
+//                                                        val srcSize = Size(bitmapWidth.toFloat(), bitmapHeight.toFloat())
+//                                                        val dstSize = Size(boxWidth.toFloat(), boxHeight.toFloat())
+//
+//                                                        val scaleFactor = ContentScale.Fit.computeScaleFactor(srcSize, dstSize)
+//
+//
+//                                                        val imageWidth = bitmapWidth * zoomState.scale
+//                                                        val imageHeight = bitmapHeight * zoomState.scale
+//
+//                                                        val bitmapRect = getScaledBitmapRect(
+//                                                            boxWidth = boxWidth,
+//                                                            boxHeight = boxHeight,
+//                                                            imageWidth = imageWidth,
+//                                                            imageHeight = imageHeight,
+//                                                            bitmapWidth = bitmapWidth,
+//                                                            bitmapHeight = bitmapHeight
+//                                                        )
+
+
+                                                    }
+
+                                                }
                                             }
+
                                         }
                                 ) {
                                     Text(
@@ -622,7 +666,63 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-suspend fun cropImageToPixels(context: Context, imageUri: Uri, params : CropParams): Bitmap? {
+internal fun getScaledBitmapRect(
+    boxWidth: Int,
+    boxHeight: Int,
+    imageWidth: Float,
+    imageHeight: Float,
+    bitmapWidth: Int,
+    bitmapHeight: Int
+): IntRect {
+    // Get scale of box to width of the image
+    // We need a rect that contains Bitmap bounds to pass if any child requires it
+    // For a image with 100x100 px with 300x400 px container and image with crop 400x400px
+    // So we need to pass top left as 0,50 and size
+    val scaledBitmapX = boxWidth / imageWidth
+    val scaledBitmapY = boxHeight / imageHeight
+
+    val topLeft = IntOffset(
+        x = (bitmapWidth * (imageWidth - boxWidth) / imageWidth / 2)
+            .coerceAtLeast(0f).toInt(),
+        y = (bitmapHeight * (imageHeight - boxHeight) / imageHeight / 2)
+            .coerceAtLeast(0f).toInt()
+    )
+
+    val size = IntSize(
+        width = (bitmapWidth * scaledBitmapX).toInt().coerceAtMost(bitmapWidth),
+        height = (bitmapHeight * scaledBitmapY).toInt().coerceAtMost(bitmapHeight)
+    )
+
+    return IntRect(offset = topLeft, size = size)
+}
+
+internal fun BoxWithConstraintsScope.getParentSize(
+    bitmapWidth: Int,
+    bitmapHeight: Int
+): IntSize {
+    // Check if Composable has fixed size dimensions
+    val hasBoundedDimens = constraints.hasBoundedWidth && constraints.hasBoundedHeight
+    // Check if Composable has infinite dimensions
+    val hasFixedDimens = constraints.hasFixedWidth && constraints.hasFixedHeight
+
+    // Box is the parent(BoxWithConstraints) that contains Canvas under the hood
+    // Canvas aspect ratio or size might not match parent but it's upper bounds are
+    // what are passed from parent. Canvas cannot be bigger or taller than BoxWithConstraints
+    val boxWidth: Int = if (hasBoundedDimens || hasFixedDimens) {
+        constraints.maxWidth
+    } else {
+        constraints.minWidth.coerceAtLeast(bitmapWidth)
+    }
+    val boxHeight: Int = if (hasBoundedDimens || hasFixedDimens) {
+        constraints.maxHeight
+    } else {
+        constraints.minHeight.coerceAtLeast(bitmapHeight)
+    }
+    return IntSize(boxWidth, boxHeight)
+}
+
+
+suspend fun createBitmapFromUri(context: Context, imageUri: Uri): Bitmap? {
     return withContext(Dispatchers.IO) {
         try {
             val contentResolver = context.contentResolver
@@ -638,24 +738,9 @@ suspend fun cropImageToPixels(context: Context, imageUri: Uri, params : CropPara
                 originalBitmap?.let {
                     val rotateBitmap = rotateBitmap(originalBitmap, orientation)
 
-                    val bitmapScale = rotateBitmap.width / params.originalSize.width
-//
-//                    val center = rotateBitmap.width/2 to rotateBitmap.height/2
-
-                    val qwe = Bitmap.createBitmap(
-                        rotateBitmap,
-                        0,
-                        0,
-                        ((params.originalSize.width * bitmapScale) / params.scale).toInt(),
-                        ((params.originalSize.width * bitmapScale) / params.scale).toInt()
-                    )
-//
-//                    val pixels = IntArray(qwe.width * qwe.height)
-//                    qwe.getPixels(pixels, 0, qwe.width, 0, 0, qwe.width, qwe.height)
-//
                     inputStream.close()
 
-                    qwe
+                    rotateBitmap
                 }
 
 //                val croppedBitmap = Bitmap.createBitmap(
