@@ -18,6 +18,10 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
+import android.renderscript.Allocation
+import android.renderscript.Element
+import android.renderscript.RenderScript
+import android.renderscript.ScriptIntrinsicBlur
 import android.util.Log
 import android.util.TypedValue
 import androidx.activity.ComponentActivity
@@ -27,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -119,6 +124,7 @@ import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
 import com.kpstv.compose.kapture.attachController
 import com.kpstv.compose.kapture.rememberScreenshotController
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -285,17 +291,15 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
 
-            val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
+            val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
+            var screenWidth by remember{ mutableStateOf(deviceWidth) }
             var screenHeight by remember { mutableStateOf(0f) }
             var bitmap by remember { mutableStateOf<Bitmap?>(null) }
             var isVisibleBaseLine by remember { mutableStateOf(false) }
 
-            val test = WindowInsets.Companion.captionBar.asPaddingValues()
-            val test2 = WindowInsets.Companion.statusBars.asPaddingValues()
             var imageUri by remember {
                 mutableStateOf<Uri?>(null)
             }
-
 
             val launcher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.StartActivityForResult(),
@@ -308,11 +312,6 @@ class MainActivity : ComponentActivity() {
             )
 
             val scope = rememberCoroutineScope()
-            var boxScope by remember {
-                mutableStateOf<BoxWithConstraintsScope?>(null)
-            }
-
-
 
             Surface(modifier = Modifier.fillMaxSize()) {
 
@@ -343,7 +342,7 @@ class MainActivity : ComponentActivity() {
 
                 imageUri?.let {
                     val rotation = remember { Animatable(0f) }
-                    val zoomState = rememberZoomState(screenWidth = screenWidth)
+                    val zoomState = rememberZoomState(context = context)
 
                     LaunchedEffect(Unit){
                         zoomState.isDragging.collect{
@@ -376,19 +375,23 @@ class MainActivity : ComponentActivity() {
                             ){
 
                                 BlurImage(
-                                    screenWidth,screenHeight
+                                    screenWidth = screenWidth,
+                                    screenHeight = screenHeight
                                 ) {
-                                    BoxWithConstraints(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(Color(0xff000000))
                                             .onGloballyPositioned {
                                                 screenHeight = it.size.height.toFloat()
+                                                if(screenHeight - 111.dpToPixels(context) < deviceWidth){
+                                                    screenWidth = deviceWidth - 280.dpToPixels(context)
+                                                    zoomState.setShortHeightDevice()
+                                                }
+                                                zoomState.setScreenWidth(screenWidth)
                                             }
 
                                     ) {
-                                        boxScope = this
-
                                         AsyncImage(
                                             model = it,
                                             contentDescription = "",
@@ -397,30 +400,21 @@ class MainActivity : ComponentActivity() {
                                                     it.painter.intrinsicSize
                                                 } else {
                                                     if (it.painter.intrinsicSize.width >= it.painter.intrinsicSize.height) {
-                                                        it.painter.intrinsicSize * (screenWidth / it.painter.intrinsicSize.width)
+                                                        it.painter.intrinsicSize * (deviceWidth / it.painter.intrinsicSize.width)
                                                     } else {
-                                                        it.painter.intrinsicSize * (screenHeight / it.painter.intrinsicSize.height)
+                                                        it.painter.intrinsicSize * (deviceWidth / it.painter.intrinsicSize.height)
                                                     }
                                                 }
 
                                                 zoomState.setContentSize(size)
-                                                when {
-                                                    size.width < screenWidth -> {
-                                                        scope.launch {
-                                                            zoomState.setScale(screenWidth / size.width)
-                                                        }
-                                                    }
 
-                                                    size.height < screenWidth -> {
-                                                        scope.launch {
-                                                            zoomState.setScale(screenWidth / size.height)
-                                                        }
+                                                if(size.width <= size.height){
+                                                    scope.launch {
+                                                        zoomState.setScale(screenWidth / size.width)
                                                     }
-
-                                                    else -> {
-                                                        scope.launch {
-                                                            zoomState.setScale(1f)
-                                                        }
+                                                }else{
+                                                    scope.launch {
+                                                        zoomState.setScale(screenWidth / size.height)
                                                     }
                                                 }
                                             },
@@ -428,11 +422,7 @@ class MainActivity : ComponentActivity() {
                                                 .fillMaxSize()
                                                 .zoomable(zoomState)
                                                 .rotate(rotation.value)
-                                                .onGloballyPositioned {
-                                                    log("qweqwe",it.positionInWindow(),(screenHeight - screenWidth)/2)
-                                                }
                                         )
-
                                     }
                                 }
 
@@ -448,8 +438,8 @@ class MainActivity : ComponentActivity() {
                                     )
                                     drawCircle(
                                         color = Color.Transparent,
-                                        radius = (screenWidth/2) - 15.dp.toPx(),
-                                        center = Offset(screenWidth/2,screenHeight/2),
+                                        radius = (screenWidth/2),
+                                        center = Offset(deviceWidth/2,screenHeight/2),
                                         blendMode = BlendMode.Clear,
                                     )
                                 }
@@ -462,62 +452,31 @@ class MainActivity : ComponentActivity() {
                                     Canvas(modifier = Modifier
                                         .fillMaxSize()
                                     ){
-                                        val offsetList = listOf(
-                                            Offset(15.dp.toPx(),screenHeight/2 - ((screenWidth/2) - 15.dp.toPx())),
-                                            Offset(screenWidth - 15.dp.toPx(),screenHeight/2 - ((screenWidth/2) - 15.dp.toPx())),
-                                            Offset(screenWidth - 15.dp.toPx(),screenHeight/2 + ((screenWidth/2) - 15.dp.toPx())),
-                                            Offset(15.dp.toPx(),screenHeight/2 + ((screenWidth/2) - 15.dp.toPx()))
-                                        )
+                                        val top = (screenHeight/2) - (screenWidth/2)
 
-                                        val zxc = (screenWidth - 30.dp.toPx())/3
+                                        val interval = screenWidth/3
 
-                                        for(i in 0..3){
+                                        val yValueWidth = (screenHeight/2) - (top + interval)
+                                        val xValueWidth = sqrt((screenWidth/2).pow(2) - yValueWidth.pow(2))
+
+                                        val xValueHeight = (screenWidth/2) - (interval)
+                                        val yValueHeight = sqrt((screenWidth/2).pow(2) - xValueHeight.pow(2))
+
+                                        for(i in 0..1){
                                             drawLine(
                                                 color = Color.White.copy(alpha = 0.5f),
-                                                start = offsetList[i],
-                                                end = offsetList[if(i == 3) 0 else i+1],
+                                                start = Offset((deviceWidth/2) - xValueWidth,top + (interval * (i+1))),
+                                                end = Offset((deviceWidth/2) + xValueWidth,top + (interval * (i+1))),
                                                 strokeWidth = 1.dp.toPx()
                                             )
+                                        }
 
-                                            if(i == 0){
-                                                for(j in 0..1){
-                                                    drawLine(
-                                                        color = Color.White.copy(alpha = 0.5f),
-                                                        start = offsetList[i].copy(y = offsetList[i].y + (zxc * (j+1))),
-                                                        end = offsetList[i+1].copy(y = offsetList[i].y + (zxc * (j+1))),
-                                                        strokeWidth = 1.dp.toPx()
-                                                    )
-                                                }
-                                            }else if(i == 3){
-                                                for(j in 0..1){
-                                                    drawLine(
-                                                        color = Color.White.copy(alpha = 0.5f),
-                                                        start = offsetList[i].copy(x = offsetList[i].x + (zxc * (j+1))),
-                                                        end = offsetList[0].copy(x = offsetList[i].x + (zxc * (j+1))),
-                                                        strokeWidth = 1.dp.toPx()
-                                                    )
-                                                }
-                                            }
-
-                                            val resourceId = when(i){
-                                                0 -> R.drawable.img_top_left
-                                                1 -> R.drawable.img_top_right
-                                                2 -> R.drawable.img_bottom_right
-                                                else -> R.drawable.img_bottom_left
-                                            }
-
-                                            val resourceBitmap =
-                                                BitmapFactory.decodeResource(resources,resourceId)
-                                                    .scale(20.dp.toPx().toInt(),20.dp.toPx().toInt())
-                                            drawImage(
-                                                resourceBitmap.asImageBitmap(),
-                                                when(i){
-                                                    1 -> offsetList[i].copy(x = offsetList[i].x - 20.dp.toPx())
-                                                    2 -> offsetList[i].copy(x = offsetList[i].x - 20.dp.toPx(),y = offsetList[i].y - 20.dp.toPx())
-                                                    3 -> offsetList[i].copy(y = offsetList[i].y - 20.dp.toPx())
-                                                    else -> offsetList[i]
-                                                }
-
+                                        for(i in 0..1){
+                                            drawLine(
+                                                color = Color.White.copy(alpha = 0.5f),
+                                                start = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) - yValueHeight),
+                                                end = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) + yValueHeight),
+                                                strokeWidth = 1.dp.toPx()
                                             )
                                         }
                                     }
@@ -599,50 +558,41 @@ class MainActivity : ComponentActivity() {
                                         .align(BottomCenter)
                                         .clickable {
                                             scope.launch {
-                                                createBitmapFromUri(context, it)?.let {
-                                                    boxScope?.let { boxScope->
-                                                        val bitmapWidth = it.width
-                                                        val bitmapHeight = it.height
+                                                createBitmapFromUri(context,it, rotation.value)?.let { image ->
+                                                    val baseScale = (zoomState.scale / zoomState.minScale)
 
-                                                        val x = bitmapWidth/2 - zoomState.offsetX
-                                                        val y = bitmapHeight/2 - zoomState.offsetY
-                                                        val imageSize = zoomState.getContentSize()
-                                                        val zoom = bitmapWidth/imageSize.width
+                                                    val leftTop = Offset(
+                                                        (zoomState.leftTop.x - zoomState.offsetX).let { if(it < 0f) 0f else it },
+                                                        (zoomState.leftTop.y - zoomState.offsetY).let { if(it < 0f) 0f else it }
+                                                    )/baseScale
 
-                                                        val pixel = screenWidth * zoom
-                                                        //log("qweqwe",zoomState.offsetX,zoomState.offsetY,screenWidth*zoomState.scale)
-
-
-
-//
-//                                                        val center = IntOffset(bitmapWidth,bitmapHeight)
-//
-//                                                        val (boxWidth: Int, boxHeight: Int) = boxScope.getParentSize(bitmapWidth, bitmapHeight)
-//
-//                                                        val srcSize = Size(bitmapWidth.toFloat(), bitmapHeight.toFloat())
-//                                                        val dstSize = Size(boxWidth.toFloat(), boxHeight.toFloat())
-//
-//                                                        val scaleFactor = ContentScale.Fit.computeScaleFactor(srcSize, dstSize)
-//
-//
-//                                                        val imageWidth = bitmapWidth * zoomState.scale
-//                                                        val imageHeight = bitmapHeight * zoomState.scale
-//
-//                                                        val bitmapRect = getScaledBitmapRect(
-//                                                            boxWidth = boxWidth,
-//                                                            boxHeight = boxHeight,
-//                                                            imageWidth = imageWidth,
-//                                                            imageHeight = imageHeight,
-//                                                            bitmapWidth = bitmapWidth,
-//                                                            bitmapHeight = bitmapHeight
-//                                                        )
-
-
+                                                    val scale = if(image.width < image.height) {
+                                                        image.width / screenWidth
+                                                    } else {
+                                                        image.height / screenWidth
                                                     }
 
+                                                    val originalLeftTop = leftTop * scale
+                                                    val size = (screenWidth/baseScale) * scale
+
+                                                    val rect = Rect(
+                                                        originalLeftTop,
+                                                        Offset(
+                                                            (originalLeftTop.x + size).let { if(it > image.width) image.width.toFloat() else it },
+                                                            (originalLeftTop.y + size).let { if(it > image.height) image.height.toFloat() else it }
+                                                        )
+                                                    )
+
+                                                    log("qweqwe",rect,image.width,image.height)
+                                                    bitmap = Bitmap.createBitmap(
+                                                        image,
+                                                        rect.left.toInt(),
+                                                        rect.top.toInt(),
+                                                        rect.width.toInt(),
+                                                        rect.height.toInt()
+                                                    )
                                                 }
                                             }
-
                                         }
                                 ) {
                                     Text(
@@ -666,63 +616,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-internal fun getScaledBitmapRect(
-    boxWidth: Int,
-    boxHeight: Int,
-    imageWidth: Float,
-    imageHeight: Float,
-    bitmapWidth: Int,
-    bitmapHeight: Int
-): IntRect {
-    // Get scale of box to width of the image
-    // We need a rect that contains Bitmap bounds to pass if any child requires it
-    // For a image with 100x100 px with 300x400 px container and image with crop 400x400px
-    // So we need to pass top left as 0,50 and size
-    val scaledBitmapX = boxWidth / imageWidth
-    val scaledBitmapY = boxHeight / imageHeight
-
-    val topLeft = IntOffset(
-        x = (bitmapWidth * (imageWidth - boxWidth) / imageWidth / 2)
-            .coerceAtLeast(0f).toInt(),
-        y = (bitmapHeight * (imageHeight - boxHeight) / imageHeight / 2)
-            .coerceAtLeast(0f).toInt()
-    )
-
-    val size = IntSize(
-        width = (bitmapWidth * scaledBitmapX).toInt().coerceAtMost(bitmapWidth),
-        height = (bitmapHeight * scaledBitmapY).toInt().coerceAtMost(bitmapHeight)
-    )
-
-    return IntRect(offset = topLeft, size = size)
-}
-
-internal fun BoxWithConstraintsScope.getParentSize(
-    bitmapWidth: Int,
-    bitmapHeight: Int
-): IntSize {
-    // Check if Composable has fixed size dimensions
-    val hasBoundedDimens = constraints.hasBoundedWidth && constraints.hasBoundedHeight
-    // Check if Composable has infinite dimensions
-    val hasFixedDimens = constraints.hasFixedWidth && constraints.hasFixedHeight
-
-    // Box is the parent(BoxWithConstraints) that contains Canvas under the hood
-    // Canvas aspect ratio or size might not match parent but it's upper bounds are
-    // what are passed from parent. Canvas cannot be bigger or taller than BoxWithConstraints
-    val boxWidth: Int = if (hasBoundedDimens || hasFixedDimens) {
-        constraints.maxWidth
-    } else {
-        constraints.minWidth.coerceAtLeast(bitmapWidth)
-    }
-    val boxHeight: Int = if (hasBoundedDimens || hasFixedDimens) {
-        constraints.maxHeight
-    } else {
-        constraints.minHeight.coerceAtLeast(bitmapHeight)
-    }
-    return IntSize(boxWidth, boxHeight)
-}
-
-
-suspend fun createBitmapFromUri(context: Context, imageUri: Uri): Bitmap? {
+suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate : Float): Bitmap? {
     return withContext(Dispatchers.IO) {
         try {
             val contentResolver = context.contentResolver
@@ -736,27 +630,16 @@ suspend fun createBitmapFromUri(context: Context, imageUri: Uri): Bitmap? {
                 val orientation = getOrientationFromExif(context,imageUri)
 
                 originalBitmap?.let {
-                    val rotateBitmap = rotateBitmap(originalBitmap, orientation)
+                    val rotateBitmap = rotateBitmap(
+                        originalBitmap,
+                        orientation,
+                        rotate
+                    )
 
                     inputStream.close()
 
                     rotateBitmap
                 }
-
-//                val croppedBitmap = Bitmap.createBitmap(
-//                    originalBitmap,
-//                    cropRect.left.toInt(),
-//                    cropRect.top.toInt(),
-//                    cropRect.width.toInt(),
-//                    cropRect.height.toInt()
-//                )
-//
-//                val pixels = IntArray(croppedBitmap.width * croppedBitmap.height)
-//                croppedBitmap.getPixels(pixels, 0, croppedBitmap.width, 0, 0, croppedBitmap.width, croppedBitmap.height)
-//
-//                inputStream?.close()
-//
-//                pixels
             }?:run{
                 null
             }
@@ -767,64 +650,71 @@ suspend fun createBitmapFromUri(context: Context, imageUri: Uri): Bitmap? {
         }
     }
 }
-data class CropParams(val offsetX: Float, val offsetY: Float, val scale: Float, val originalSize: Size)
-fun calculateCropArea(cropParams: CropParams): Rect {
-    val originalWidth = cropParams.originalSize.width
-    val originalHeight = cropParams.originalSize.height
 
-    // Calculate the scaled dimensions
-    val scaledWidth = (originalWidth * cropParams.scale).toInt()
-    val scaledHeight = (originalHeight * cropParams.scale).toInt()
+fun createBitmapFromUri(context: Context, imageUri: Uri) : Bitmap?{
+    return try {
+        val contentResolver = context.contentResolver
+        val inputStream = contentResolver.openInputStream(imageUri)
 
-    // Calculate the crop area position after scaling
-    val scaledOffsetX = cropParams.offsetX * cropParams.scale
-    val scaledOffsetY = cropParams.offsetY * cropParams.scale
+        inputStream?.let {
+            val options = BitmapFactory.Options()
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888
+            val originalBitmap = BitmapFactory.decodeStream(inputStream, null, options)
 
-    // Calculate the left, top, right, and bottom coordinates of the crop area
-    val left = max(0f, scaledOffsetX).toInt()
-    val top = max(0f, scaledOffsetY).toInt()
-    val right = min(scaledWidth, scaledOffsetX.toInt() + scaledWidth)
-    val bottom = min(scaledHeight, scaledOffsetY.toInt() + scaledHeight)
+            val orientation = getOrientationFromExif(context,imageUri)
 
-    // Calculate the width and height of the crop area
-    val width = max(0, right - left)
-    val height = max(0, bottom - top)
+            originalBitmap?.let {
+                val rotateBitmap = rotateBitmap(
+                    originalBitmap,
+                    orientation
+                )
 
-    return Rect(left.toFloat(), top.toFloat(), (left + width).toFloat(), (top + height).toFloat())
+                inputStream.close()
+
+                rotateBitmap
+            }
+        }?:run{
+            null
+        }
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
 }
 
 
 private fun getOrientationFromExif(context: Context,imageUri: Uri): Int {
     var inputStream: InputStream? = null
     try {
-        // Open an input stream from the content resolver
         inputStream = context.contentResolver.openInputStream(imageUri)
 
-        // Check if the input stream is not null
         if (inputStream != null) {
-            // Get the orientation from Exif data
             val exifInterface = ExifInterface(inputStream)
             return exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
         }
     } catch (e: IOException) {
         e.printStackTrace()
     } finally {
-        // Close the input stream
         inputStream?.close()
     }
 
     return ExifInterface.ORIENTATION_UNDEFINED
 }
 
-private fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
+private fun rotateBitmap(bitmap: Bitmap, orientation: Int, rotate: Float = 0f): Bitmap {
     val matrix = Matrix()
 
-    when (orientation) {
-        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-        ExifInterface.ORIENTATION_NORMAL -> return bitmap
+    val totalRotate = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90f + rotate
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180f + rotate
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270f + rotate
+        ExifInterface.ORIENTATION_NORMAL -> rotate
+        else -> rotate
     }
+
+    matrix.postRotate(totalRotate)
+
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }
 
@@ -849,7 +739,7 @@ fun BlurImage(
 
                         drawCircle(
                             color = Color.Transparent,
-                            radius = (screenWidth / 2) - 15.dp.toPx(),
+                            radius = (screenWidth / 2) + 10,
                             center = Offset(screenWidth / 2, screenHeight / 2),
                             blendMode = BlendMode.Clear
                         )
@@ -862,6 +752,7 @@ fun BlurImage(
         }
     }
 }
+
 
 
 @OptIn(ExperimentalFoundationApi::class)
