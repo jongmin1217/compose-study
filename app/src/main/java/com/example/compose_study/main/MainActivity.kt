@@ -32,11 +32,14 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.AnimationVector2D
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -57,6 +60,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.Alignment.Companion.BottomCenter
@@ -288,327 +293,681 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-
-            val context = LocalContext.current
-
-            val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
-            var screenWidth by remember{ mutableStateOf(deviceWidth) }
-            var screenHeight by remember { mutableStateOf(0f) }
-            var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-            var isVisibleBaseLine by remember { mutableStateOf(false) }
-
-            var imageUri by remember {
-                mutableStateOf<Uri?>(null)
-            }
-
-            val launcher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.StartActivityForResult(),
-                onResult = {
-                    if (it.resultCode == Activity.RESULT_OK) {
-                        val data = it.data
-                        imageUri = data?.data
-                    }
-                }
-            )
-
-            val scope = rememberCoroutineScope()
+            var isShow by rememberSaveable{ mutableStateOf(false) }
 
             Surface(modifier = Modifier.fillMaxSize()) {
-
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Button(onClick = {
-                        launcher.launch(
-                            Intent(
-                                Intent.ACTION_PICK,
-                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                            )
-                        )
+                        isShow = true
                     }) {
                         Text(text = "asdf")
                     }
-
-                    bitmap?.let {
-
-                        AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier
-                            .fillMaxWidth()
-                            .align(
-                                Center
-                            ), contentScale = ContentScale.FillWidth)
-                    }
-
                 }
 
-                imageUri?.let {
-                    val rotation = remember { Animatable(0f) }
-                    val zoomState = rememberZoomState(context = context)
+                if(isShow){
+                    SlideScreen(initValue = 5){
+                        isShow = false
+                    }
+                }
+            }
+        }
+    }
+}
+class EditableOffset(private val initialOffset: Animatable<Float, AnimationVector1D>) {
+    var offset by mutableStateOf(initialOffset)
 
-                    LaunchedEffect(Unit){
-                        zoomState.isDragging.collect{
-                            isVisibleBaseLine = it
+    companion object {
+        val Saver: Saver<EditableOffset, *> = listSaver(
+            save = { listOf(it.initialOffset.value) },
+            restore = {
+                EditableOffset(Animatable(it[0]))
+            }
+        )
+    }
+}
+
+fun Offset.toIntOffset() = IntOffset(x.roundToInt(), y.roundToInt())
+
+fun vibrator(context : Context){
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        (context.getSystemService(ComponentActivity.VIBRATOR_MANAGER_SERVICE) as VibratorManager).run {
+            defaultVibrator.vibrate(
+                VibrationEffect.createOneShot(10, 70)
+            )
+        }
+    } else {
+        val vibrator =
+            context.getSystemService(ComponentActivity.VIBRATOR_SERVICE) as Vibrator
+        vibrator.vibrate(10)
+    }
+}
+var currentScreenWidth = 0f
+@Composable
+fun SlideScreen(
+    modifier: Modifier = Modifier,
+    initValue : Int,
+    onDismiss : () -> Unit
+){
+    val density = LocalDensity.current
+    val context = LocalContext.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
+    val scope = rememberCoroutineScope()
+
+    val startOffset = 10.dpToPixels(context)
+    val endOffset = screenWidth - 62.dpToPixels(context)
+
+    fun calculateNewOffset(offsetX : Float) : Float{
+        val interval = (screenWidth - 72.dpToPixels(context))/8
+
+        for(i in 0..7){
+            val start = (interval * i) + 10.dpToPixels(context)
+            val end = (interval * (i+1)) + 10.dpToPixels(context)
+
+            if(offsetX in start .. end){
+                return if(i%2 == 0) start else end
+            }
+            if(i == 7 && offsetX > end) return end
+        }
+
+        return 0f
+    }
+
+    fun getOffset(index : Int) : Float{
+        val interval = (screenWidth - 72.dpToPixels(context))/4
+
+        return calculateNewOffset((interval * (index - 1)) + 10.dpToPixels(context))
+    }
+    
+    val imageTopList = listOf(
+        painterResource(id = R.drawable.type_1_up),
+        painterResource(id = R.drawable.type_2_up),
+        painterResource(id = R.drawable.type_3_up),
+        painterResource(id = R.drawable.type_4_up),
+        painterResource(id = R.drawable.type_5_up)
+    )
+
+    val imageBottomList = listOf(
+        painterResource(id = R.drawable.type_1_side),
+        painterResource(id = R.drawable.type_2_side),
+        painterResource(id = R.drawable.type_3_side),
+        painterResource(id = R.drawable.type_4_side),
+        painterResource(id = R.drawable.type_5_side)
+    )
+
+    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
+        EditableOffset(
+            Animatable(getOffset(initValue)).apply {
+                updateBounds(startOffset,endOffset)
+            }
+        )
+    }
+
+    val slideTextPaintGray = baseTextPaint(
+        13,
+        android.graphics.Color.parseColor("#FF777777"),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
+
+    val slideTextPaintPink = baseTextPaint(
+        13,
+        android.graphics.Color.parseColor("#FFff4857"),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
+
+    var selectIndex by remember{ mutableStateOf(0f) }
+    var selectIndexInt by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = offsetX.offset.value, block = {
+        offsetX.offset.value.let {
+            val interval = (endOffset - startOffset)/4
+            selectIndex = ((it - startOffset)/interval) + 1f
+        }
+    })
+
+    LaunchedEffect(key1 = selectIndex){
+        selectIndexInt = round(selectIndex).toInt()
+    }
+
+    LaunchedEffect(key1 = selectIndexInt){
+        vibrator(context)
+    }
+
+
+
+
+
+    LaunchedEffect(key1 = screenWidth){
+        if(currentScreenWidth !=0f && screenWidth != currentScreenWidth) {
+            val scale = screenWidth/ currentScreenWidth
+            offsetX.offset.updateBounds(startOffset,endOffset)
+            scope.launch {
+                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
+            }
+        }
+        currentScreenWidth = screenWidth
+    }
+
+    CustomBottomSheetDialog(
+        onDismissRequest = {
+            onDismiss.invoke()
+        },
+        properties = BottomSheetDialogProperties(
+            navigationBarProperties = NavigationBarProperties(
+                color = Color.White
+            ),
+            behaviorProperties = BottomSheetBehaviorProperties(
+                state = BottomSheetBehaviorProperties.State.Expanded,
+                skipCollapsed = true,
+                isDraggable = true
+            )
+        )
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(top = 24.dp),
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Divider(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(4.5.dp))
+                        .align(CenterHorizontally),
+                    color = Color(0xffd9d9d9)
+                )
+
+                Text(
+                    text = "체형 선택",
+                    style = TextStyle(
+                        fontSize = 17.dp.textSp,
+                        fontWeight = FontWeight.W700,
+                        color = Color(0xff111111),
+                        fontFamily = Font.nanumSquareRoundFont
+                    ),
+                    modifier = Modifier
+                        .padding(top = 20.dp)
+                        .align(CenterHorizontally)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Box(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .background(
+                            color = Color(0xfffafafa),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                ) {
+                    repeat(5){
+                        val alpha = abs(selectIndex - (it+1).toFloat()).let {  value ->
+                            val distance = if(value > 1f) 1f else value
+                            1f - distance
+                        }
+                        Column(
+                            modifier = Modifier
+                                .padding(top = 30.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = imageTopList[it],
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(70.9.dp)
+                                    .align(CenterHorizontally)
+                                    .alpha(alpha)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Image(
+                                painter = imageBottomList[it],
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(154.5.dp)
+                                    .align(CenterHorizontally)
+                                    .alpha(alpha)
+                            )
                         }
                     }
-                    CustomBottomSheetDialog(
-                        onDismissRequest = {
-                            imageUri = null
-                        },
-                        properties = BottomSheetDialogProperties(
-                            navigationBarProperties = NavigationBarProperties(
-                                color = Color.White
-                            ),
-                            behaviorProperties = BottomSheetBehaviorProperties(
-                                state = BottomSheetBehaviorProperties.State.Expanded,
-                                skipCollapsed = true,
-                                isDraggable = true
-                            )
-                        )
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(top = 24.dp),
-                            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
-                        ) {
-                            Box(modifier = Modifier
-                                .fillMaxSize()
-                            ){
+                }
 
-                                BlurImage(
-                                    screenWidth = screenWidth,
-                                    screenHeight = screenHeight
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color(0xff000000))
-                                            .onGloballyPositioned {
-                                                screenHeight = it.size.height.toFloat()
-                                                if(screenHeight - 111.dpToPixels(context) < deviceWidth){
-                                                    screenWidth = deviceWidth - 280.dpToPixels(context)
-                                                    zoomState.setShortHeightDevice()
-                                                }
-                                                zoomState.setScreenWidth(screenWidth)
-                                            }
+                Spacer(modifier = Modifier.height(57.5.dp))
 
-                                    ) {
-                                        AsyncImage(
-                                            model = it,
-                                            contentDescription = "",
-                                            onSuccess = {
-                                                val size = if (it.result.isSampled) {
-                                                    it.painter.intrinsicSize
-                                                } else {
-                                                    if (it.painter.intrinsicSize.width >= it.painter.intrinsicSize.height) {
-                                                        it.painter.intrinsicSize * (deviceWidth / it.painter.intrinsicSize.width)
-                                                    } else {
-                                                        it.painter.intrinsicSize * (deviceWidth / it.painter.intrinsicSize.height)
-                                                    }
-                                                }
-
-                                                zoomState.setContentSize(size)
-
-                                                if(size.width <= size.height){
-                                                    scope.launch {
-                                                        zoomState.setScale(screenWidth / size.width)
-                                                    }
-                                                }else{
-                                                    scope.launch {
-                                                        zoomState.setScale(screenWidth / size.height)
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .zoomable(zoomState)
-                                                .rotate(rotation.value)
-                                        )
-                                    }
-                                }
-
-
-                                Canvas(modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                    }
-                                ){
-                                    drawRect(
-                                        color = Color.Black.copy(alpha = 0.8f),
-                                    )
-                                    drawCircle(
-                                        color = Color.Transparent,
-                                        radius = (screenWidth/2),
-                                        center = Offset(deviceWidth/2,screenHeight/2),
-                                        blendMode = BlendMode.Clear,
-                                    )
-                                }
-
-                                AnimatedVisibility(
-                                    visible = isVisibleBaseLine,
-                                    enter = fadeIn(),
-                                    exit = fadeOut()
-                                ) {
-                                    Canvas(modifier = Modifier
-                                        .fillMaxSize()
-                                    ){
-                                        val top = (screenHeight/2) - (screenWidth/2)
-
-                                        val interval = screenWidth/3
-
-                                        val yValueWidth = (screenHeight/2) - (top + interval)
-                                        val xValueWidth = sqrt((screenWidth/2).pow(2) - yValueWidth.pow(2))
-
-                                        val xValueHeight = (screenWidth/2) - (interval)
-                                        val yValueHeight = sqrt((screenWidth/2).pow(2) - xValueHeight.pow(2))
-
-                                        for(i in 0..1){
-                                            drawLine(
-                                                color = Color.White.copy(alpha = 0.5f),
-                                                start = Offset((deviceWidth/2) - xValueWidth,top + (interval * (i+1))),
-                                                end = Offset((deviceWidth/2) + xValueWidth,top + (interval * (i+1))),
-                                                strokeWidth = 1.dp.toPx()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                scope.launch {
+                                    offsetX.offset.animateTo(
+                                        calculateNewOffset(
+                                            it.x - 26.dpToPixels(
+                                                context
                                             )
-                                        }
-
-                                        for(i in 0..1){
-                                            drawLine(
-                                                color = Color.White.copy(alpha = 0.5f),
-                                                start = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) - yValueHeight),
-                                                end = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) + yValueHeight),
-                                                strokeWidth = 1.dp.toPx()
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .align(BottomCenter)
-                                        .padding(bottom = 86.dp)
-                                        .width(68.dp)
-                                        .height(34.dp)
-                                        .border(
-                                            BorderStroke(1.dp, Color(0x80dddddd)),
-                                            RoundedCornerShape(3.dp)
                                         )
-                                        .clickable {
-                                            if (!rotation.isRunning) {
-                                                scope.launch {
-                                                    rotation.animateTo(rotation.value + 90f)
-                                                }
-                                                scope.launch {
-                                                    val preSize = zoomState.getContentSize()
-                                                    val newSize =
-                                                        Size(preSize.height, preSize.width)
-
-                                                    zoomState.reset(newSize)
-                                                }
-                                            }
-                                        }
-                                ) {
-                                    Text(
-                                        text = "회전",
-                                        style = TextStyle(
-                                            fontSize = 13.dp.textSp,
-                                            fontWeight = FontWeight.W700,
-                                            color = Color(0xffffffff),
-                                            fontFamily = Font.nanumSquareRoundFont
-                                        ),
-                                        modifier = Modifier.align(Center)
                                     )
                                 }
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(54.dp)
-                                        .background(Color(0xffffffff))
-                                        .verticalScroll(rememberScrollState())
-                                ) {
-                                    Text(
-                                        text = "자르기 및 회전",
-                                        style = TextStyle(
-                                            fontSize = 17.dp.textSp,
-                                            fontWeight = FontWeight.W700,
-                                            color = Color(0xff111111),
-                                            fontFamily = Font.nanumSquareRoundFont
-                                        ),
-                                        modifier = Modifier.align(Center)
-                                    )
-
-                                    Image(
-                                        painter = painterResource(id = R.drawable.btn_del),
-                                        contentDescription = "",
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .align(CenterEnd)
-                                            .padding(10.dp)
-                                            .clickable {
-                                                imageUri = null
-                                            }
-                                    )
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .background(Color(0xffff4857))
-                                        .align(BottomCenter)
-                                        .clickable {
-                                            scope.launch {
-                                                createBitmapFromUri(context,it, rotation.value)?.let { image ->
-                                                    val baseScale = (zoomState.scale / zoomState.minScale)
-
-                                                    val leftTop = Offset(
-                                                        (zoomState.leftTop.x - zoomState.offsetX).let { if(it < 0f) 0f else it },
-                                                        (zoomState.leftTop.y - zoomState.offsetY).let { if(it < 0f) 0f else it }
-                                                    )/baseScale
-
-                                                    val scale = if(image.width < image.height) {
-                                                        image.width / screenWidth
-                                                    } else {
-                                                        image.height / screenWidth
-                                                    }
-
-                                                    val originalLeftTop = leftTop * scale
-                                                    val size = (screenWidth/baseScale) * scale
-
-                                                    val rect = Rect(
-                                                        originalLeftTop,
-                                                        Offset(
-                                                            (originalLeftTop.x + size).let { if(it > image.width) image.width.toFloat() else it },
-                                                            (originalLeftTop.y + size).let { if(it > image.height) image.height.toFloat() else it }
-                                                        )
-                                                    )
-
-                                                    log("qweqwe",rect,image.width,image.height)
-                                                    bitmap = Bitmap.createBitmap(
-                                                        image,
-                                                        rect.left.toInt(),
-                                                        rect.top.toInt(),
-                                                        rect.width.toInt(),
-                                                        rect.height.toInt()
-                                                    )
-                                                }
-                                            }
-                                        }
-                                ) {
-                                    Text(
-                                        text = "확인",
-                                        style = TextStyle(
-                                            fontSize = 16.dp.textSp,
-                                            fontWeight = FontWeight.W700,
-                                            color = Color(0xffffffff),
-                                            fontFamily = Font.nanumSquareRoundFont
-                                        ),
-                                        modifier = Modifier.align(Center)
-                                    )
-                                }
-
                             }
                         }
+                ){
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(TopCenter)
+                    ){
+
+                        drawLine(
+                            color = Color(0xffdddddd),
+                            Offset(36.dp.toPx(), 26.dp.toPx()),
+                            Offset(size.width - 36.dp.toPx(), 26.dp.toPx()),
+                            strokeWidth = 8.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+
+                        drawLine(
+                            color = Color(0xffff4857),
+                            Offset(36.dp.toPx(), 26.dp.toPx()),
+                            Offset(offsetX.offset.value + 26.dp.toPx(), 26.dp.toPx()),
+                            strokeWidth = 8.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+
+                        for(i in 0..4){
+                            drawContext.canvas.nativeCanvas.drawText(
+                                (i+1).toString(),
+                                (((size.width - 72.dp.toPx())/4)*i) + 36.dp.toPx(),
+                                72.dp.toPx(),
+                                if(i+1 == selectIndexInt) slideTextPaintPink else slideTextPaintGray
+                            )
+                        }
+                    }
+
+                    Image(
+                        painter = painterResource(id = R.drawable.img_slider),
+                        contentDescription = "",
+                        modifier = Modifier
+                            .size(52.dp)
+                            .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDrag = { _, dragAmount ->
+                                        scope.launch {
+                                            offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        scope.launch {
+                                            offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
+                                        }
+                                    }
+                                )
+                            }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Crop(){
+    val context = LocalContext.current
+
+    val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
+    var screenWidth by remember{ mutableStateOf(deviceWidth) }
+    var screenHeight by remember { mutableStateOf(0f) }
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var isVisibleBaseLine by remember { mutableStateOf(false) }
+
+    var imageUri by rememberSaveable {
+        mutableStateOf<Uri?>(null)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = {
+            if (it.resultCode == Activity.RESULT_OK) {
+                val data = it.data
+                imageUri = data?.data
+            }
+        }
+    )
+
+    log("qweqwe",deviceWidth,screenWidth,screenHeight)
+
+    val scope = rememberCoroutineScope()
+
+    Surface(modifier = Modifier.fillMaxSize()) {
+
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Button(onClick = {
+                launcher.launch(
+                    Intent(
+                        Intent.ACTION_PICK,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    )
+                )
+            }) {
+                Text(text = "asdf")
+            }
+
+            bitmap?.let {
+
+                AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier
+                    .fillMaxWidth()
+                    .align(
+                        Center
+                    ), contentScale = ContentScale.FillWidth)
+            }
+
+        }
+
+        imageUri?.let {
+            val rotation = remember { Animatable(0f) }
+            val zoomState = rememberZoomState()
+
+            LaunchedEffect(Unit){
+                zoomState.isDragging.collect{
+                    isVisibleBaseLine = it
+                }
+            }
+            CustomBottomSheetDialog(
+                onDismissRequest = {
+                    imageUri = null
+                },
+                properties = BottomSheetDialogProperties(
+                    navigationBarProperties = NavigationBarProperties(
+                        color = Color.White
+                    ),
+                    behaviorProperties = BottomSheetBehaviorProperties(
+                        state = BottomSheetBehaviorProperties.State.Expanded,
+                        skipCollapsed = true,
+                        isDraggable = true
+                    )
+                )
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(top = 24.dp),
+                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                ) {
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                    ){
+
+                        BlurImage(
+                            screenWidth = screenWidth,
+                            screenHeight = screenHeight
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color(0xff000000))
+                                    .onGloballyPositioned {
+                                        screenHeight = it.size.height.toFloat()
+                                        if (screenHeight - 111.dpToPixels(context) < deviceWidth) {
+                                            screenWidth =
+                                                deviceWidth - 280.dpToPixels(context)
+                                            zoomState.setShortHeightDevice(
+                                                280.dpToPixels(
+                                                    context
+                                                )
+                                            )
+                                        }
+                                        zoomState.setScreenWidth(screenWidth)
+                                    }
+
+                            ) {
+                                AsyncImage(
+                                    model = it,
+                                    contentDescription = "",
+                                    onSuccess = {
+                                        val size = if (it.result.isSampled) {
+                                            it.painter.intrinsicSize
+                                        } else {
+                                            if (it.painter.intrinsicSize.width >= it.painter.intrinsicSize.height) {
+                                                it.painter.intrinsicSize * (deviceWidth / it.painter.intrinsicSize.width)
+                                            } else {
+                                                it.painter.intrinsicSize * (screenHeight / it.painter.intrinsicSize.height)
+                                            }
+                                        }
+
+                                        log("qweqwe",size,it.painter.intrinsicSize,deviceWidth,screenWidth,screenWidth / size.width)
+                                        zoomState.setContentSize(size)
+
+                                        if(size.width <= size.height){
+                                            scope.launch {
+                                                zoomState.setScale(screenWidth / size.width)
+                                            }
+                                        }else{
+                                            scope.launch {
+                                                zoomState.setScale(screenWidth / size.height)
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .zoomable(zoomState)
+                                        .rotate(rotation.value)
+                                )
+                            }
+                        }
+
+
+                        Canvas(modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                        ){
+                            drawRect(
+                                color = Color.Black.copy(alpha = 0.8f),
+                            )
+                            drawCircle(
+                                color = Color.Transparent,
+                                radius = (screenWidth/2),
+                                center = Offset(deviceWidth/2,screenHeight/2),
+                                blendMode = BlendMode.Clear,
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = isVisibleBaseLine,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Canvas(modifier = Modifier
+                                .fillMaxSize()
+                            ){
+                                val top = (screenHeight/2) - (screenWidth/2)
+
+                                val interval = screenWidth/3
+
+                                val yValueWidth = (screenHeight/2) - (top + interval)
+                                val xValueWidth = sqrt((screenWidth/2).pow(2) - yValueWidth.pow(2))
+
+                                val xValueHeight = (screenWidth/2) - (interval)
+                                val yValueHeight = sqrt((screenWidth/2).pow(2) - xValueHeight.pow(2))
+
+                                for(i in 0..1){
+                                    drawLine(
+                                        color = Color.White.copy(alpha = 0.5f),
+                                        start = Offset((deviceWidth/2) - xValueWidth,top + (interval * (i+1))),
+                                        end = Offset((deviceWidth/2) + xValueWidth,top + (interval * (i+1))),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                }
+
+                                for(i in 0..1){
+                                    drawLine(
+                                        color = Color.White.copy(alpha = 0.5f),
+                                        start = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) - yValueHeight),
+                                        end = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) + yValueHeight),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .align(BottomCenter)
+                                .padding(bottom = 86.dp)
+                                .width(68.dp)
+                                .height(34.dp)
+                                .border(
+                                    BorderStroke(1.dp, Color(0x80dddddd)),
+                                    RoundedCornerShape(3.dp)
+                                )
+                                .clickable {
+                                    if (!rotation.isRunning) {
+                                        scope.launch {
+                                            rotation.animateTo(rotation.value + 90f)
+                                        }
+                                        scope.launch {
+                                            val preSize = zoomState.getContentSize()
+                                            val newSize =
+                                                Size(preSize.height, preSize.width)
+
+                                            zoomState.reset(newSize)
+                                        }
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = "회전",
+                                style = TextStyle(
+                                    fontSize = 13.dp.textSp,
+                                    fontWeight = FontWeight.W700,
+                                    color = Color(0xffffffff),
+                                    fontFamily = Font.nanumSquareRoundFont
+                                ),
+                                modifier = Modifier.align(Center)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .background(Color(0xffffffff))
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = "자르기 및 회전",
+                                style = TextStyle(
+                                    fontSize = 17.dp.textSp,
+                                    fontWeight = FontWeight.W700,
+                                    color = Color(0xff111111),
+                                    fontFamily = Font.nanumSquareRoundFont
+                                ),
+                                modifier = Modifier.align(Center)
+                            )
+
+                            Image(
+                                painter = painterResource(id = R.drawable.btn_del),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .align(CenterEnd)
+                                    .padding(10.dp)
+                                    .clickable {
+                                        imageUri = null
+                                    }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .background(Color(0xffff4857))
+                                .align(BottomCenter)
+                                .clickable {
+                                    scope.launch {
+                                        createBitmapFromUri(
+                                            context,
+                                            it,
+                                            rotation.value
+                                        )?.let { image ->
+                                            val baseScale =
+                                                (zoomState.scale / zoomState.minScale)
+
+                                            val leftTop = Offset(
+                                                (zoomState.leftTop.x - zoomState.offsetX).let { if (it < 0f) 0f else it },
+                                                (zoomState.leftTop.y - zoomState.offsetY).let { if (it < 0f) 0f else it }
+                                            ) / baseScale
+
+                                            val scale = if (image.width < image.height) {
+                                                image.width / screenWidth
+                                            } else {
+                                                image.height / screenWidth
+                                            }
+
+                                            val originalLeftTop = leftTop * scale
+                                            val size = (screenWidth / baseScale) * scale
+
+                                            val rect = Rect(
+                                                originalLeftTop,
+                                                Offset(
+                                                    (originalLeftTop.x + size).let { if (it > image.width) image.width.toFloat() else it },
+                                                    (originalLeftTop.y + size).let { if (it > image.height) image.height.toFloat() else it }
+                                                )
+                                            )
+
+                                            log(
+                                                "qweqwe",
+                                                rect,
+                                                image.width,
+                                                image.height,
+                                                zoomState.offsetX,
+                                                zoomState.offsetY,
+                                                zoomState.scale
+                                            )
+                                            bitmap = Bitmap.createBitmap(
+                                                image,
+                                                rect.left.toInt(),
+                                                rect.top.toInt(),
+                                                rect.width.toInt(),
+                                                rect.height.toInt()
+                                            )
+                                        }
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = "확인",
+                                style = TextStyle(
+                                    fontSize = 16.dp.textSp,
+                                    fontWeight = FontWeight.W700,
+                                    color = Color(0xffffffff),
+                                    fontFamily = Font.nanumSquareRoundFont
+                                ),
+                                modifier = Modifier.align(Center)
+                            )
+                        }
+
                     }
                 }
             }

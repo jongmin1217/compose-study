@@ -205,6 +205,12 @@ fun Modifier.zoomable(
                 },
                 onTap = onTap,
                 onDoubleTap = { position ->
+                    hideJob?.cancel()
+                    zoomState.setDragging(true)
+                    hideJob = scope.launch {
+                        delay(1000)
+                        zoomState.setDragging(false)
+                    }
                     scope.launch {
                         onDoubleTap(position)
                     }

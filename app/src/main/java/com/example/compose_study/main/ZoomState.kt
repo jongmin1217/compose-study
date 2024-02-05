@@ -5,18 +5,28 @@ import android.util.Log
 import androidx.annotation.FloatRange
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.DecayAnimationSpec
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -26,21 +36,23 @@ import kotlinx.coroutines.launch
 import java.lang.Float.max
 import kotlin.math.abs
 
+
 @Stable
 class ZoomState(
     private var contentSize: Size = Size.Zero,
     private val velocityDecay: DecayAnimationSpec<Float> = exponentialDecay(),
-    private val context : Context
+    offsetX : Animatable<Float,AnimationVector1D> = Animatable(0f),
+    offsetY : Animatable<Float,AnimationVector1D> = Animatable(0f),
+    scale : Animatable<Float,AnimationVector1D> = Animatable(1f).apply { updateBounds(0.1f, 100f) }
 ) {
 
     private val _isDragging = MutableStateFlow(false)
     val isDragging = _isDragging.asStateFlow()
 
     private var isShortHeightDevice = false
+    private var paddingValue = 0f
 
-    private var _scale = Animatable(1f).apply {
-        updateBounds(0.1f, 100f)
-    }
+    private var _scale = scale
 
     private var maxScale = 1f
     var minScale = 1f
@@ -50,12 +62,13 @@ class ZoomState(
     val scale: Float
         get() = _scale.value
 
-    private var _offsetX = Animatable(0f)
+    private var _offsetX = offsetX
 
     val offsetX: Float
         get() = _offsetX.value
 
-    private var _offsetY = Animatable(0f)
+
+    private var _offsetY = offsetY
 
     val offsetY: Float
         get() = _offsetY.value
@@ -82,8 +95,9 @@ class ZoomState(
         _isDragging.value = isDragging
     }
 
-    fun setShortHeightDevice(){
+    fun setShortHeightDevice(paddingValue : Float){
         isShortHeightDevice = true
+        this.paddingValue = paddingValue
     }
 
     fun getContentSize() = contentSize
@@ -173,6 +187,7 @@ class ZoomState(
 
         _offsetY.updateBounds(newBounds.top, newBounds.bottom)
         launch {
+            log("qweqwe",newOffset.y)
             _offsetY.snapTo(newOffset.y)
         }
 
@@ -245,7 +260,7 @@ class ZoomState(
         newScale: Float,
     ): Rect {
         val newSize = fitContentSize * newScale
-        val boundX = max((newSize.width - if(isShortHeightDevice) layoutSize.width - 280.dpToPixels(context) else layoutSize.width), 0f) * 0.5f
+        val boundX = max((newSize.width - if(isShortHeightDevice) layoutSize.width - paddingValue else layoutSize.width), 0f) * 0.5f
         val boundY = max((newSize.height - screenWidth), 0f) * 0.5f
 
         return Rect(-boundX, -boundY, boundX, boundY)
@@ -270,8 +285,34 @@ class ZoomState(
 @Composable
 fun rememberZoomState(
     contentSize: Size = Size.Zero,
-    velocityDecay: DecayAnimationSpec<Float> = exponentialDecay(),
-    context : Context
-) = remember {
-    ZoomState(contentSize, velocityDecay, context)
+    velocityDecay: DecayAnimationSpec<Float> = exponentialDecay()
+) = remember{
+    ZoomState(contentSize, velocityDecay)
+}
+
+class EditableZoomState(private val initialZoomState: ZoomState) {
+    var value by mutableStateOf(initialZoomState)
+
+    companion object {
+        val Saver: Saver<EditableZoomState, *> = listSaver(
+            save = {
+                listOf(
+                    it.initialZoomState.offsetX,
+                    it.initialZoomState.offsetY,
+                    it.initialZoomState.scale
+                )
+            },
+            restore = {
+                EditableZoomState(
+                    ZoomState(
+                        offsetX = Animatable(0f),
+                        offsetY = Animatable(0f),
+                        scale = Animatable(1f).apply {
+                            updateBounds(0.1f,100f)
+                        }
+                    )
+                )
+            }
+        )
+    }
 }
