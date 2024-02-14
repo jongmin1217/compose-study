@@ -30,6 +30,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.AnimationVector2D
@@ -38,6 +40,11 @@ import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -48,9 +55,12 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -111,6 +121,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -148,12 +159,32 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.*
+import java.util.Locale.Category
+import kotlin.collections.ArrayList
 import kotlin.math.*
 
 
 const val START_PADDING = 40
 const val POINT_PADDING = 14
 const val BOTTOM_PADDING = 22
+
+data class TestData(
+    val list : List<TestCategory>
+)
+data class TestCategory(
+    val id : Int,
+    val title : String,
+    val contentList : List<TestContent>
+)
+
+data class TestContent(
+    val categoryId : Int,
+    val id : Int,
+    val title : String
+)
+
+
+
 
 class MainActivity : ComponentActivity() {
 
@@ -286,33 +317,556 @@ class MainActivity : ComponentActivity() {
         GraphPoint(29, "09-30", null)
     )
 
-
+    enum class PetBodyType(val index:Int,val typeStr: String,val topImg:Int?,val sideImg:Int?,val notice:Array<String>) {
+        UNKNOWN(0,"체형을 선택해 주세요",null,null, arrayOf()),
+        EX_UNDERWEIGHT(1,"극저체중",R.drawable.img_ex_underweight_top,R.drawable.img_ex_underweight_side, arrayOf("갈비뼈가 눈에도 확연히 보이며 아주 쉽게 만져짐","척추, 갈비뼈, 골반뼈가 멀리서도 보일 정도로 두드러짐","눈에 보이는 체지방이 없고 근육량 또한 적음")),
+        UNDERWEIGHT(2,"저체중",R.drawable.img_underweight_top,R.drawable.img_underweight_side, arrayOf("갈비뼈가 쉽게 만져짐","척추, 갈비뼈의 굴곡이 보이며, 골반뼈가 명확하게 보임","옆에서 봤을 때 허리가 뚜렷하며 복부가 오목함")),
+        NORMAL(3,"보통",R.drawable.img_normal_top,R.drawable.img_normal_side, arrayOf("과도한 지방층 없이 갈비뼈가 만져짐","위에서 봤을 때 갈비뼈와 허리를 볼 수 있음","옆에서 봤을 때 복부가 위로 올라간 모습이 보임")),
+        OVERWEIGHT(4,"과체중",R.drawable.img_overweight_top,R.drawable.img_overweight_side, arrayOf("지방층이 살짝 있는 상태에서 갈비뼈가 만져짐","위에서 봤을 때 허리가 구별되지만 뚜렷하지 않음","옆에서 봤을 때 복부의 오목한 부분이 없거나 잘 보이지 않음")),
+        EX_OVERWEIGHT(5,"비만",R.drawable.img_ex_overweight_top,R.drawable.img_ex_overweight_side, arrayOf("갈비뼈가 만져지지 않거나 상당히 압력을 가해야만 만질 수 있음","위에서 봤을 때 허리가 구별되지 않음","옆에서 봤을 때 복부의 오목한 부분이 없고 복부 팽창이 있음"))
+    }
 
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val categoryList = ArrayList<TestCategory>()
+
+        for(i in 0 .. 20){
+            val contentList = ArrayList<TestContent>()
+            for(j in 0 .. 20){
+                contentList.add(TestContent(i,j,"$i - $j"))
+            }
+            categoryList.add(TestCategory(i,i.toString(),contentList))
+        }
+
+        val list = TestData(categoryList)
+
         setContent {
-            var isShow by rememberSaveable{ mutableStateOf(false) }
+            MaterialTheme {
+                var state by remember{ mutableStateOf(0) }
+                var isShow by remember{ mutableStateOf(false) }
+                var selectList by remember{ mutableStateOf<List<TestContent>>(listOf()) }
 
-            Surface(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Button(onClick = {
-                        isShow = true
-                    }) {
-                        Text(text = "asdf")
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                ) {
+                    if(state == 0){
+                        BasicScreen { state = 1 }
+                    }else{
+                        TestScreen(
+                            onSelectClick = { isShow = true },
+                            onBackClick = { state = 0 }
+                        )
                     }
-                }
 
-                if(isShow){
-                    SlideScreen(initValue = 5){
-                        isShow = false
+                    if(isShow){
+                        TestSheet(
+                            data = list,
+                            selectList = selectList,
+                            onSelect = { selectList = it },
+                            onDismiss = { isShow = false }
+                        )
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+fun CategoryComponent(
+    data : TestCategory,
+    isSelected : Boolean,
+    onClick: (TestCategory) -> Unit
+){
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(68.dp)
+            .background(if (isSelected) Color.White else Color(0xfffafafa))
+            .clickable { onClick.invoke(data) }
+    ) {
+        AppText(
+            modifier = Modifier
+                .align(CenterStart)
+                .padding(start = 20.dp),
+            text = data.title,
+            style = TextStyle(
+                fontSize = 16.dp.textSp,
+                fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if(isSelected) Color(0xff111111) else Color(0xff444444),
+                fontFamily = Font.nanumSquareRoundFont
+            )
+        )
+    }
+}
+
+@Composable
+fun ContentComponent(
+    data : TestContent,
+    isSelected: Boolean,
+    onClick: (TestContent) -> Unit
+){
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(68.dp)
+            .background(Color.White)
+            .clickable { onClick.invoke(data) }
+    ) {
+        AppText(
+            modifier = Modifier
+                .align(CenterStart)
+                .padding(start = 20.dp),
+            text = data.title,
+            style = TextStyle(
+                fontSize = 16.dp.textSp,
+                fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if(isSelected) Color(0xff111111) else Color(0xff444444),
+                fontFamily = Font.nanumSquareRoundFont
+            )
+        )
+
+        Image(
+            painter = painterResource(id = if(isSelected) R.drawable.toggle_on_svg else R.drawable.toggle_off_svg),
+            contentDescription = "",
+            modifier = Modifier
+                .align(CenterEnd)
+                .padding(end = 20.dp)
+                .size(27.dp)
+        )
+    }
+}
+
+@Composable
+fun TestTag(
+    modifier: Modifier = Modifier,
+    data: TestContent,
+    onDeleteClick : (TestContent) -> Unit
+){
+    Row(
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .height(34.dp)
+                .border(
+                    width = 1.dp,
+                    color = Color(0xffdddddd),
+                    shape = RoundedCornerShape(size = 100.dp)
+                )
+        ) {
+            Text(
+                modifier = Modifier
+                    .align(CenterVertically)
+                    .padding(start = 14.dp),
+                text = data.title,
+                style = TextStyle(
+                    fontSize = 14.dp.textSp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xff111111),
+                    fontFamily = Font.nanumSquareRoundFont
+                )
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Image(
+                painter = painterResource(id = R.drawable.ic_close),
+                contentDescription = "",
+                modifier = Modifier
+                    .size(9.dp)
+                    .align(CenterVertically)
+                    .clickable { onDeleteClick.invoke(data) }
+            )
+
+            Spacer(modifier = Modifier.width(14.dp))
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
+@Composable
+fun TestSheet(
+    data : TestData,
+    selectList : List<TestContent>,
+    onSelect : (List<TestContent>) -> Unit,
+    onDismiss: () -> Unit
+){
+
+    var selectContentList by remember{ mutableStateOf(selectList) }
+    var selectIndex by remember{ mutableStateOf(0) }
+    val categoryState = rememberScrollState()
+    val contentState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+
+    CustomBottomSheetDialog(
+        onDismissRequest = {
+            onDismiss.invoke()
+        },
+        properties = BottomSheetDialogProperties(
+            navigationBarProperties = NavigationBarProperties(
+                color = Color.White
+            ),
+            behaviorProperties = BottomSheetBehaviorProperties(
+                state = BottomSheetBehaviorProperties.State.Expanded,
+                skipCollapsed = true,
+                isDraggable = true
+            )
+        )
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(top = 24.dp),
+            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(TopCenter)
+                        .padding(bottom = 56.dp)
+                ){
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Divider(
+                            modifier = Modifier
+                                .width(36.dp)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(4.5.dp))
+                                .align(CenterHorizontally),
+                            color = Color(0xffd9d9d9)
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Spacer(modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color(0xfff0f0f0))
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxSize()
+                    ){
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(120.dp)
+                                .background(Color(0xfffafafa))
+                                .verticalScroll(categoryState)
+                        ) {
+                            for(i in 0 until data.list.size){
+                                CategoryComponent(
+                                    data = data.list[i],
+                                    isSelected = data.list[i].id == selectIndex,
+                                    onClick = {
+                                        if(selectIndex == it.id) scope.launch { contentState.animateScrollTo(0) }
+                                        else{
+                                            selectIndex = it.id
+                                            scope.launch { contentState.scrollTo(0) }
+                                        }
+                                    }
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(120.dp))
+                        }
+
+                        Spacer(modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .background(Color(0xfff0f0f0))
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(contentState)
+                        ) {
+                            for(i in 0 until data.list[selectIndex].contentList.size){
+                                ContentComponent(
+                                    data = data.list[selectIndex].contentList[i],
+                                    isSelected = selectContentList.contains(data.list[selectIndex].contentList[i]),
+                                    onClick = {
+                                        val list = if(selectContentList.contains(it)){
+                                            selectContentList - it
+                                        }else{
+                                            if(selectContentList.size > 9) return@ContentComponent
+                                            listOf(it) + selectContentList
+                                        }
+                                        selectContentList = list
+                                    }
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(120.dp))
+                        }
+                    }
+                }
+
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(BottomCenter)
+                ) {
+
+                    AnimatedVisibility(
+                        visible = selectContentList.isNotEmpty(),
+                        enter = slideInVertically{ it },
+                        exit = slideOutVertically{ it }
+                    ) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(
+                                    elevation = 8.dp,
+                                    spotColor = Color(0x0D000000)
+                                )
+                                .background(Color.White)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                            ) {
+                                LazyRow(
+                                    modifier = Modifier
+                                        .padding(top = 20.dp)
+                                ) {
+                                    item{
+                                        Spacer(modifier = Modifier.width(20.dp))
+                                    }
+
+                                    items(
+                                        items = selectContentList,
+                                        key = { it.title }
+                                    ){
+                                        TestTag(
+                                            modifier = Modifier
+                                                .animateItemPlacement()
+                                                .background(Color.White)
+                                            ,
+                                            data = it,
+                                            onDeleteClick = { data ->
+                                                selectContentList = selectContentList - data
+                                            }
+                                        )
+                                    }
+
+                                    item{
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .padding(vertical = 20.dp)
+                                        .padding(start = 20.dp)
+                                ){
+                                    Spacer(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .padding(1.dp)
+                                            .background(
+                                                color = Color(0xffaaaaaa),
+                                                shape = CircleShape
+                                            )
+                                            .align(CenterVertically)
+
+                                    )
+
+                                    Spacer(modifier = Modifier.width(4.dp))
+
+                                    AppText(
+                                        text = "최대 10개까지 선책 가능합니다.",
+                                        style = TextStyle(
+                                            fontSize = 12.dp.textSp,
+                                            fontWeight = FontWeight.W400,
+                                            color = Color(0xffaaaaaa),
+                                            fontFamily = Font.nanumSquareRoundFont,
+                                            lineHeight = 18.dp.textSp
+                                        ),
+                                        modifier = Modifier.align(CenterVertically)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .background(
+                                if (selectContentList.isEmpty()) Color(0xffdddddd)
+                                else Color(0xffff4857)
+                            )
+                            .clickable { onSelect.invoke(selectContentList) }
+                    ) {
+                        AppText(
+                            modifier = Modifier.align(Center),
+                            text = "확인 (${selectContentList.size} / 10개)",
+                            style = TextStyle(
+                                fontSize = 16.dp.textSp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontFamily = Font.nanumSquareRoundFont
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BasicScreen(onClick: () -> Unit){
+    Box(modifier = Modifier.fillMaxSize()){
+        Button(
+            modifier = Modifier.align(Center),
+            onClick = onClick
+        ) {
+            Text(text = "선택하기")
+        }
+    }
+}
+
+@Composable
+fun TestScreen(
+    onSelectClick : () -> Unit,
+    onBackClick: () -> Unit
+){
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(TopCenter)
+        ) {
+            HeaderScreen{
+                onBackClick.invoke()
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AppText(
+                text = "알레르기 요인",
+                style = TextStyle(
+                    fontSize = 14.dp.textSp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xffaaaaaa),
+                    fontFamily = Font.nanumSquareRoundFont,
+                    lineHeight = 22.dp.textSp
+                ),
+                modifier = Modifier.padding(start = 20.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .clickable { onSelectClick.invoke() },
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                AppText(
+                    text = "선택해 주세요",
+                    style = TextStyle(
+                        fontSize = 20.dp.textSp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xff111111),
+                        fontFamily = Font.nanumSquareRoundFont,
+                        lineHeight = 34.dp.textSp
+                    ),
+                    modifier = Modifier.align(CenterVertically)
+                )
+
+                Image(
+                    modifier = Modifier
+                        .align(CenterVertically)
+                        .size(27.dp),
+                    painter = painterResource(R.drawable.ico_arrow_close_svg),
+                    contentDescription = "",
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .height(1.dp)
+                .background(Color(0xffdddddd))
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .align(BottomCenter)
+                .background(Color(0xffff4857))
+                .clickable {
+                    onBackClick.invoke()
+                }
+        ) {
+            AppText(
+                modifier = Modifier.align(Center),
+                text = "알레르기 요인 설정",
+                style = TextStyle(
+                    fontSize = 16.dp.textSp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontFamily = Font.nanumSquareRoundFont
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun HeaderScreen(
+    backBtnOnClick : () -> Unit
+){
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .height(57.dp)
+        .background(Color.White)
+    ) {
+        IconButton(
+            onClick = {
+                backBtnOnClick()
+            },
+            modifier = Modifier.size(54.dp)
+        ){
+            Image(
+                painter = painterResource(id = R.drawable.back_arrow_svg),
+                contentDescription = "back"
+            )
+        }
+    }
+}
+
+
 class EditableOffset(private val initialOffset: Animatable<Float, AnimationVector1D>) {
     var offset by mutableStateOf(initialOffset)
 
@@ -348,110 +902,16 @@ fun SlideScreen(
     initValue : Int,
     onDismiss : () -> Unit
 ){
-    val density = LocalDensity.current
-    val context = LocalContext.current
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
-    val scope = rememberCoroutineScope()
-
-    val startOffset = 10.dpToPixels(context)
-    val endOffset = screenWidth - 62.dpToPixels(context)
-
-    fun calculateNewOffset(offsetX : Float) : Float{
-        val interval = (screenWidth - 72.dpToPixels(context))/8
-
-        for(i in 0..7){
-            val start = (interval * i) + 10.dpToPixels(context)
-            val end = (interval * (i+1)) + 10.dpToPixels(context)
-
-            if(offsetX in start .. end){
-                return if(i%2 == 0) start else end
-            }
-            if(i == 7 && offsetX > end) return end
-        }
-
-        return 0f
-    }
-
-    fun getOffset(index : Int) : Float{
-        val interval = (screenWidth - 72.dpToPixels(context))/4
-
-        return calculateNewOffset((interval * (index - 1)) + 10.dpToPixels(context))
-    }
-    
-    val imageTopList = listOf(
-        painterResource(id = R.drawable.type_1_up),
-        painterResource(id = R.drawable.type_2_up),
-        painterResource(id = R.drawable.type_3_up),
-        painterResource(id = R.drawable.type_4_up),
-        painterResource(id = R.drawable.type_5_up)
+    val list = listOf(
+        MainActivity.PetBodyType.EX_UNDERWEIGHT,
+        MainActivity.PetBodyType.UNDERWEIGHT,
+        MainActivity.PetBodyType.NORMAL,
+        MainActivity.PetBodyType.OVERWEIGHT,
+        MainActivity.PetBodyType.EX_OVERWEIGHT
     )
 
-    val imageBottomList = listOf(
-        painterResource(id = R.drawable.type_1_side),
-        painterResource(id = R.drawable.type_2_side),
-        painterResource(id = R.drawable.type_3_side),
-        painterResource(id = R.drawable.type_4_side),
-        painterResource(id = R.drawable.type_5_side)
-    )
+    var selectValue by remember{ mutableStateOf(0f) }
 
-    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
-        EditableOffset(
-            Animatable(getOffset(initValue)).apply {
-                updateBounds(startOffset,endOffset)
-            }
-        )
-    }
-
-    val slideTextPaintGray = baseTextPaint(
-        13,
-        android.graphics.Color.parseColor("#FF777777"),
-        Paint.Align.CENTER,
-        density,
-        context,
-        Typeface.NORMAL
-    )
-
-    val slideTextPaintPink = baseTextPaint(
-        13,
-        android.graphics.Color.parseColor("#FFff4857"),
-        Paint.Align.CENTER,
-        density,
-        context,
-        Typeface.NORMAL
-    )
-
-    var selectIndex by remember{ mutableStateOf(0f) }
-    var selectIndexInt by remember { mutableStateOf(0) }
-
-    LaunchedEffect(key1 = offsetX.offset.value, block = {
-        offsetX.offset.value.let {
-            val interval = (endOffset - startOffset)/4
-            selectIndex = ((it - startOffset)/interval) + 1f
-        }
-    })
-
-    LaunchedEffect(key1 = selectIndex){
-        selectIndexInt = round(selectIndex).toInt()
-    }
-
-    LaunchedEffect(key1 = selectIndexInt){
-        vibrator(context)
-    }
-
-
-
-
-
-    LaunchedEffect(key1 = screenWidth){
-        if(currentScreenWidth !=0f && screenWidth != currentScreenWidth) {
-            val scale = screenWidth/ currentScreenWidth
-            offsetX.offset.updateBounds(startOffset,endOffset)
-            scope.launch {
-                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
-            }
-        }
-        currentScreenWidth = screenWidth
-    }
 
     CustomBottomSheetDialog(
         onDismissRequest = {
@@ -474,156 +934,315 @@ fun SlideScreen(
                 .padding(top = 24.dp),
             shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Divider(
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ){
+                Column(
                     modifier = Modifier
-                        .width(36.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(4.5.dp))
-                        .align(CenterHorizontally),
-                    color = Color(0xffd9d9d9)
-                )
-
-                Text(
-                    text = "체형 선택",
-                    style = TextStyle(
-                        fontSize = 17.dp.textSp,
-                        fontWeight = FontWeight.W700,
-                        color = Color(0xff111111),
-                        fontFamily = Font.nanumSquareRoundFont
-                    ),
-                    modifier = Modifier
-                        .padding(top = 20.dp)
-                        .align(CenterHorizontally)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Box(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .background(
-                            color = Color(0xfffafafa),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                        .fillMaxSize()
                 ) {
-                    repeat(5){
-                        val alpha = abs(selectIndex - (it+1).toFloat()).let {  value ->
-                            val distance = if(value > 1f) 1f else value
-                            1f - distance
-                        }
-                        Column(
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Divider(
                             modifier = Modifier
-                                .padding(top = 30.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Image(
-                                painter = imageTopList[it],
-                                contentDescription = "",
-                                modifier = Modifier
-                                    .width(200.dp)
-                                    .height(70.9.dp)
-                                    .align(CenterHorizontally)
-                                    .alpha(alpha)
-                            )
+                                .width(36.dp)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(4.5.dp))
+                                .align(Alignment.CenterHorizontally),
+                            color = Color(0xffd9d9d9)
+                        )
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "체형 선택",
+                            style = TextStyle(
+                                fontSize = 17.dp.textSp,
+                                fontWeight = FontWeight.W700,
+                                color = Color(0xff111111),
+                                fontFamily = Font.nanumSquareRoundFont
+                            ),
+                            modifier = Modifier
+                                .padding(top = 20.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
 
-                            Image(
-                                painter = imageBottomList[it],
-                                contentDescription = "",
-                                modifier = Modifier
-                                    .width(200.dp)
-                                    .height(154.5.dp)
-                                    .align(CenterHorizontally)
-                                    .alpha(alpha)
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
-                }
 
-                Spacer(modifier = Modifier.height(57.5.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .padding(bottom = 178.dp)
+                            .background(
+                                color = Color(0xfffafafa),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        repeat(list.size){
+                            val alpha = abs(selectValue - (it+1).toFloat()).let { value ->
+                                val distance = if(value > 1f) 1f else value
+                                1f - distance
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .padding(top = 30.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                list[it].topImg?.let { imageResource ->
+                                    Image(
+                                        painter = painterResource(id = imageResource),
+                                        contentDescription = "",
+                                        modifier = Modifier
+                                            .width(200.dp)
+                                            .height(70.9.dp)
+                                            .align(Alignment.CenterHorizontally)
+                                            .alpha(alpha)
+                                    )
+                                }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectTapGestures {
-                                scope.launch {
-                                    offsetX.offset.animateTo(
-                                        calculateNewOffset(
-                                            it.x - 26.dpToPixels(
-                                                context
-                                            )
-                                        )
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                list[it].sideImg?.let { imageResource ->
+                                    Image(
+                                        painter = painterResource(id = imageResource),
+                                        contentDescription = "",
+                                        modifier = Modifier
+                                            .width(200.dp)
+                                            .height(154.5.dp)
+                                            .align(Alignment.CenterHorizontally)
+                                            .alpha(alpha)
                                     )
                                 }
                             }
                         }
-                ){
-                    Canvas(
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                ) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    PingSlider(
+                        initValue = initValue,
+                        onChangeValue = {
+                            selectValue = it
+                        },
+                        onChangeIndex = {
+                            //selectIndex = it
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .align(TopCenter)
-                    ){
-
-                        drawLine(
-                            color = Color(0xffdddddd),
-                            Offset(36.dp.toPx(), 26.dp.toPx()),
-                            Offset(size.width - 36.dp.toPx(), 26.dp.toPx()),
-                            strokeWidth = 8.dp.toPx(),
-                            cap = StrokeCap.Round
-                        )
-
-                        drawLine(
-                            color = Color(0xffff4857),
-                            Offset(36.dp.toPx(), 26.dp.toPx()),
-                            Offset(offsetX.offset.value + 26.dp.toPx(), 26.dp.toPx()),
-                            strokeWidth = 8.dp.toPx(),
-                            cap = StrokeCap.Round
-                        )
-
-                        for(i in 0..4){
-                            drawContext.canvas.nativeCanvas.drawText(
-                                (i+1).toString(),
-                                (((size.width - 72.dp.toPx())/4)*i) + 36.dp.toPx(),
-                                72.dp.toPx(),
-                                if(i+1 == selectIndexInt) slideTextPaintPink else slideTextPaintGray
-                            )
-                        }
-                    }
-
-                    Image(
-                        painter = painterResource(id = R.drawable.img_slider),
-                        contentDescription = "",
-                        modifier = Modifier
-                            .size(52.dp)
-                            .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDrag = { _, dragAmount ->
-                                        scope.launch {
-                                            offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        scope.launch {
-                                            offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
-                                        }
-                                    }
-                                )
+                            .height(56.dp)
+                            .background(Color(0xffff4857))
+                            .clickable {
+//                                onSelected.invoke(
+//                                    bodyTypeList.find { it.index == selectIndex }
+//                                        ?: PetBodyType.NORMAL
+//                                )
                             }
-                    )
+                    ) {
+                        Text(
+                            text = "선택하기",
+                            style = TextStyle(
+                                fontSize = 16.dp.textSp,
+                                fontWeight = FontWeight.W700,
+                                color = Color(0xffffffff),
+                                fontFamily = Font.nanumSquareRoundFont
+                            ),
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PingSlider(
+    initValue: Int,
+    count: Int = 5,
+    activeColor : Color = Color(0xffff4857),
+    backgroundColor: Color = Color(0xffdddddd),
+    activeTextColor : String = "#FFff4857",
+    basicTextColor : String = "#FF777777",
+    textSize : Int = 13,
+    onChangeValue : (Float) -> Unit,
+    onChangeIndex : (Int) -> Unit
+){
+
+    val context = LocalContext.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val startOffset = 10.dpToPixels(context)
+    val endOffset = screenWidth - 62.dpToPixels(context)
+
+    val slideTextPaintBasic = baseTextPaint(
+        textSize,
+        android.graphics.Color.parseColor(basicTextColor),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
+
+    val slideTextPaintSelect = baseTextPaint(
+        textSize,
+        android.graphics.Color.parseColor(activeTextColor),
+        Paint.Align.CENTER,
+        density,
+        context,
+        Typeface.NORMAL
+    )
+
+    fun calculateNewOffset(offsetX : Float) : Float{
+        val cnt = (count-1)*2
+        val interval = (screenWidth - 72.dpToPixels(context))/cnt
+
+        for(i in 0 until cnt){
+            val start = (interval * i) + 10.dpToPixels(context)
+            val end = (interval * (i+1)) + 10.dpToPixels(context)
+
+            if(offsetX in start .. end){
+                return if(i%2 == 0) start else end
+            }
+            if(i == cnt - 1 && offsetX > end) return end
+        }
+
+        return 0f
+    }
+
+    fun getOffset(index : Int) : Float{
+        val interval = (screenWidth - 72.dpToPixels(context))/(count - 1)
+
+        return calculateNewOffset((interval * (index.let { if(it == 0) 1 else it } - 1)) + 10.dpToPixels(context))
+    }
+
+    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
+        EditableOffset(
+            Animatable(getOffset(initValue)).apply {
+                updateBounds(startOffset,endOffset)
+            }
+        )
+    }
+
+    var selectIndex by remember{ mutableStateOf(0f) }
+    var selectIndexInt by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = offsetX.offset.value, block = {
+        offsetX.offset.value.let {
+            val interval = (endOffset - startOffset)/(count - 1)
+            selectIndex = ((it - startOffset)/interval) + 1f
+            onChangeValue.invoke(selectIndex)
+        }
+    })
+
+    LaunchedEffect(key1 = selectIndex){
+        selectIndexInt = round(selectIndex).toInt()
+    }
+
+    LaunchedEffect(key1 = selectIndexInt){
+        onChangeIndex.invoke(selectIndexInt)
+    }
+
+    LaunchedEffect(key1 = screenWidth){
+        if(currentScreenWidth !=0f && screenWidth != currentScreenWidth) {
+            val scale = screenWidth/ currentScreenWidth
+            offsetX.offset.updateBounds(startOffset,endOffset)
+            scope.launch {
+                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
+            }
+        }
+        currentScreenWidth = screenWidth
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    scope.launch {
+                        offsetX.offset.animateTo(
+                            calculateNewOffset(
+                                it.x - 26.dpToPixels(
+                                    context
+                                )
+                            )
+                        )
+                    }
+                }
+            }
+    ){
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(TopCenter)
+        ){
+
+            drawLine(
+                color = backgroundColor,
+                Offset(36.dp.toPx(), 26.dp.toPx()),
+                Offset(size.width - 36.dp.toPx(), 26.dp.toPx()),
+                strokeWidth = 8.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            drawLine(
+                color = activeColor,
+                Offset(36.dp.toPx(), 26.dp.toPx()),
+                Offset(offsetX.offset.value + 26.dp.toPx(), 26.dp.toPx()),
+                strokeWidth = 8.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            for(i in 0 until count){
+                drawContext.canvas.nativeCanvas.drawText(
+                    (i+1).toString(),
+                    (((size.width - 72.dp.toPx())/(count - 1))*i) + 36.dp.toPx(),
+                    72.dp.toPx(),
+                    if(i+1 == selectIndexInt) slideTextPaintSelect else slideTextPaintBasic
+                )
+            }
+        }
+
+        Image(
+            painter = painterResource(id = R.drawable.img_slider),
+            contentDescription = "",
+            modifier = Modifier
+                .size(52.dp)
+                .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { _, dragAmount ->
+                            scope.launch {
+                                offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
+                            }
+                        },
+                        onDragEnd = {
+                            scope.launch {
+                                offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
+                            }
+                        }
+                    )
+                }
+        )
     }
 }
 
