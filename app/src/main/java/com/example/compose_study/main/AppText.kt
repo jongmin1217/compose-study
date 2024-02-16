@@ -10,8 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -163,4 +165,101 @@ fun CenterText(text : AnnotatedString, textStyle: TextStyle, modifier: Modifier)
             style = textStyle
         )
     }
+}
+
+enum class ColorTextType{
+    Single,Multi
+}
+
+@Composable
+fun ColoredText(
+    modifier: Modifier = Modifier,
+    text: String,
+    targetText : String,
+    targetType : ColorTextType = ColorTextType.Single,
+    targetColor : Color = Color(0xffff4857),
+    targetWeight: FontWeight? = null,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    letterSpacing: TextUnit = TextUnit.Unspecified,
+    textDecoration: TextDecoration? = null,
+    textAlign: TextAlign? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    style: TextStyle = LocalTextStyle.current
+) {
+    val annotatedString = buildAnnotatedString {
+        append(text)
+
+        if(targetType == ColorTextType.Single){
+            val startIndex = text.lowercase().indexOf(targetText.lowercase())
+            if (startIndex != -1) {
+                val endIndex = startIndex + targetText.length
+                addStyle(
+                    style = SpanStyle(
+                        color = targetColor,
+                        fontWeight = targetWeight
+                    ),
+                    start = startIndex,
+                    end = endIndex
+                )
+            }
+        }else{
+            findAllIndices(text.lowercase(),targetText.lowercase()).run {
+                if(this.isNotEmpty()){
+                    for(i in this){
+                        val endIndex = i + targetText.length
+                        addStyle(
+                            style = SpanStyle(
+                                color = targetColor
+                            ),
+                            start = i,
+                            end = endIndex
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    AppText(
+        text = annotatedString,
+        modifier = modifier,
+        color = color,
+        fontSize = fontSize,
+        fontStyle = fontStyle,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
+        textAlign = textAlign,
+        lineHeight = lineHeight,
+        overflow = overflow,
+        softWrap = softWrap,
+        maxLines = maxLines,
+        onTextLayout = onTextLayout,
+        style = style
+    )
+}
+
+fun findAllIndices(mainString: String, subString: String): List<Int> {
+    var currentIndex = 0
+    val indices = mutableListOf<Int>()
+
+    while (currentIndex < mainString.length) {
+        val index = mainString.indexOf(subString, currentIndex)
+        if (index == -1) {
+            break
+        }
+        indices.add(index)
+        currentIndex = index + 1
+    }
+
+    return indices
 }
