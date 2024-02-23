@@ -60,6 +60,8 @@ object Versions{
     const val photo_view = "1.0.1"
     const val screenshot = "1.0.0"
 
+    const val gson = "2.8.8"
+
 }
 
 object Libs{
@@ -144,6 +146,8 @@ object Libs{
 
     const val photo_view = "io.github.fornewid:photo-compose:${Versions.photo_view}"
     const val screenshot = "io.github.kaustubhpatange:kapture:${Versions.screenshot}"
+
+    const val gson = "com.google.code.gson:gson:${Versions.gson}"
 }
 
 object TestLibs{

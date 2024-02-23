@@ -123,4 +123,6 @@ dependencies {
 
     implementation(Libs.photo_view)
     implementation(Libs.screenshot)
+
+    implementation(Libs.gson)
 }

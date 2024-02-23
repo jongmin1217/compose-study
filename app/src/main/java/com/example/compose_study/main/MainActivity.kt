@@ -139,16 +139,19 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.example.compose_study.R
 import com.example.compose_study.ui.theme.Font
+import com.google.gson.Gson
 import com.kpstv.compose.kapture.attachController
 import com.kpstv.compose.kapture.rememberScreenshotController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.onebone.toolbar.CollapsingToolbarScaffold
 import me.onebone.toolbar.ScrollStrategy
 import me.onebone.toolbar.rememberCollapsingToolbarScaffoldState
+import org.json.JSONArray
 import soup.compose.photo.ExperimentalPhotoApi
 import soup.compose.photo.PhotoBox
 import soup.compose.photo.rememberPhotoState
@@ -328,155 +331,175 @@ class MainActivity : ComponentActivity() {
         EX_OVERWEIGHT(5,"비만",R.drawable.img_ex_overweight_top,R.drawable.img_ex_overweight_side, arrayOf("갈비뼈가 만져지지 않거나 상당히 압력을 가해야만 만질 수 있음","위에서 봤을 때 허리가 구별되지 않음","옆에서 봤을 때 복부의 오목한 부분이 없고 복부 팽창이 있음"))
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val list = TestData(
-            listOf(
-                TestCategory(
-                    0,
-                    "육류",
-                    listOf(
-                        TestContent(0,0,"소고기"),
-                        TestContent(0,1,"돼지고기"),
-                        TestContent(0,2,"염소고기"),
-                        TestContent(0,3,"양고기"),
-                        TestContent(0,4,"토끼고기"),
-                        TestContent(0,5,"닭고기"),
-                        TestContent(0,6,"메추라기 고기"),
-                        TestContent(0,7,"오리고기"),
-                        TestContent(0,8,"칠면조 고기")
-                    )
-                ),
-                TestCategory(
-                    1,
-                    "생선",
-                    listOf(
-                        TestContent(1,0,"연어"),
-                        TestContent(1,1,"참치"),
-                        TestContent(1,2,"대구"),
-                        TestContent(1,3,"고등어"),
-                        TestContent(1,4,"멸치"),
-                        TestContent(1,5,"농어"),
-                        TestContent(1,6,"정어리"),
-                        TestContent(1,7,"청어"),
-                        TestContent(1,8,"송어"),
-                        TestContent(1,9,"새우"),
-                        TestContent(1,10,"게"),
-                        TestContent(1,11,"조개")
-                    )
-                ),
-                TestCategory(
-                    2,
-                    "곡물 & 견과",
-                    listOf(
-                        TestContent(2,0,"쌀"),
-                        TestContent(2,1,"밀, 글루텐"),
-                        TestContent(2,2,"콩 (대두)"),
-                        TestContent(2,3,"렌즈 콩"),
-                        TestContent(2,4,"완두콩"),
-                        TestContent(2,5,"보리"),
-                        TestContent(2,6,"메밀"),
-                        TestContent(2,7,"귀리"),
-                        TestContent(2,8,"조"),
-                        TestContent(2,9,"아마 씨"),
-                        TestContent(2,10,"옥수수"),
-                        TestContent(2,11,"땅콩"),
-                        TestContent(2,12,"생밤"),
-                        TestContent(2,13,"빵 효모"),
-                        TestContent(2,14,"맥주 효모")
-                    )
-                ),
-                TestCategory(
-                    3,
-                    "과일",
-                    listOf(
-                        TestContent(3,0,"귤, 레몬, 라임"),
-                        TestContent(3,1,"키위"),
-                        TestContent(3,2,"파인애플"),
-                        TestContent(3,3,"망고"),
-                        TestContent(3,4,"복숭아"),
-                        TestContent(3,5,"자두"),
-                        TestContent(3,6,"딸기"),
-                        TestContent(3,7,"블루베리"),
-                        TestContent(3,8,"멜론"),
-                        TestContent(3,9,"수박")
-                    )
-                ),
-                TestCategory(
-                    4,
-                    "유제품",
-                    listOf(
-                        TestContent(4,0,"계란"),
-                        TestContent(4,1,"우유"),
-                        TestContent(4,2,"체다 치즈"),
-                        TestContent(4,3,"요거트"),
-                        TestContent(4,4,"버터"),
-                        TestContent(4,5,"카제인")
-                    )
-                ),
-                TestCategory(
-                    5,
-                    "야채",
-                    listOf(
-                        TestContent(5,0,"오이"),
-                        TestContent(5,1,"토마토"),
-                        TestContent(5,2,"감자"),
-                        TestContent(5,3,"고구마"),
-                        TestContent(5,4,"양상추"),
-                        TestContent(5,5,"시금치"),
-                        TestContent(5,6,"파프리카"),
-                        TestContent(5,7,"파슬리"),
-                        TestContent(5,8,"비트"),
-                        TestContent(5,9,"알로에 베라"),
-                        TestContent(5,10,"브로콜리")
-                    )
-                ),
-                TestCategory(
-                    6,
-                    "기타",
-                    listOf(
-                        TestContent(6,0,"번데기"),
-                        TestContent(6,1,"베이킹 파우더"),
-                        TestContent(6,2,"기타")
-                    )
-                )
-            )
-        )
+
 
         setContent {
             MaterialTheme {
 
-                var isShow by remember{ mutableStateOf(false) }
-                var selectList by remember{ mutableStateOf<List<TestContent>>(listOf()) }
-
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White)
-                ) {
-                    BasicScreen(list = selectList){ isShow = true }
-
-                    if(isShow){
-                        TestSheet(
-                            data = list,
-                            selectList = selectList,
-                            onSelect = {
-                                selectList = it
-                                isShow = false
-                            },
-                            onDismiss = { isShow = false }
-                        )
-                    }
-                }
+                BaseScreen{Screen()}
             }
         }
     }
 }
 
 @Composable
-fun CategoryComponent(
+fun Screen(){
+    val list = TestData(
+        listOf(
+            TestCategory(
+                0,
+                "육류",
+                listOf(
+                    TestContent(0,0,"소고기"),
+                    TestContent(0,1,"돼지고기"),
+                    TestContent(0,2,"염소고기"),
+                    TestContent(0,3,"양고기"),
+                    TestContent(0,4,"토끼고기"),
+                    TestContent(0,5,"닭고기"),
+                    TestContent(0,6,"메추라기 고기"),
+                    TestContent(0,7,"오리고기"),
+                    TestContent(0,8,"칠면조 고기")
+                )
+            ),
+            TestCategory(
+                1,
+                "생선",
+                listOf(
+                    TestContent(1,0,"연어"),
+                    TestContent(1,1,"참치"),
+                    TestContent(1,2,"대구"),
+                    TestContent(1,3,"고등어"),
+                    TestContent(1,4,"멸치"),
+                    TestContent(1,5,"농어"),
+                    TestContent(1,6,"정어리"),
+                    TestContent(1,7,"청어"),
+                    TestContent(1,8,"송어"),
+                    TestContent(1,9,"새우"),
+                    TestContent(1,10,"게"),
+                    TestContent(1,11,"조개")
+                )
+            ),
+            TestCategory(
+                2,
+                "곡물 & 견과",
+                listOf(
+                    TestContent(2,0,"쌀"),
+                    TestContent(2,1,"밀, 글루텐"),
+                    TestContent(2,2,"콩 (대두)"),
+                    TestContent(2,3,"렌즈 콩"),
+                    TestContent(2,4,"완두콩"),
+                    TestContent(2,5,"보리"),
+                    TestContent(2,6,"메밀"),
+                    TestContent(2,7,"귀리"),
+                    TestContent(2,8,"조"),
+                    TestContent(2,9,"아마 씨"),
+                    TestContent(2,10,"옥수수"),
+                    TestContent(2,11,"땅콩"),
+                    TestContent(2,12,"생밤"),
+                    TestContent(2,13,"빵 효모"),
+                    TestContent(2,14,"맥주 효모")
+                )
+            ),
+            TestCategory(
+                3,
+                "과일",
+                listOf(
+                    TestContent(3,0,"귤, 레몬, 라임"),
+                    TestContent(3,1,"키위"),
+                    TestContent(3,2,"파인애플"),
+                    TestContent(3,3,"망고"),
+                    TestContent(3,4,"복숭아"),
+                    TestContent(3,5,"자두"),
+                    TestContent(3,6,"딸기"),
+                    TestContent(3,7,"블루베리"),
+                    TestContent(3,8,"멜론"),
+                    TestContent(3,9,"수박")
+                )
+            ),
+            TestCategory(
+                4,
+                "유제품",
+                listOf(
+                    TestContent(4,0,"계란"),
+                    TestContent(4,1,"우유"),
+                    TestContent(4,2,"체다 치즈"),
+                    TestContent(4,3,"요거트"),
+                    TestContent(4,4,"버터"),
+                    TestContent(4,5,"카제인")
+                )
+            ),
+            TestCategory(
+                5,
+                "야채",
+                listOf(
+                    TestContent(5,0,"오이"),
+                    TestContent(5,1,"토마토"),
+                    TestContent(5,2,"감자"),
+                    TestContent(5,3,"고구마"),
+                    TestContent(5,4,"양상추"),
+                    TestContent(5,5,"시금치"),
+                    TestContent(5,6,"파프리카"),
+                    TestContent(5,7,"파슬리"),
+                    TestContent(5,8,"비트"),
+                    TestContent(5,9,"알로에 베라"),
+                    TestContent(5,10,"브로콜리")
+                )
+            ),
+            TestCategory(
+                6,
+                "기타",
+                listOf(
+                    TestContent(6,0,"번데기"),
+                    TestContent(6,1,"베이킹 파우더"),
+                    TestContent(6,2,"기타")
+                )
+            )
+        )
+    )
+
+    var isShow by remember{ mutableStateOf(false) }
+    var selectList by remember{ mutableStateOf<List<TestContent>>(listOf()) }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        BasicScreen(list = selectList){ isShow = true }
+
+        if(isShow){
+            TestSheet(
+                data = list,
+                selectList = selectList,
+                onSelect = {
+                    selectList = it
+                    isShow = false
+                },
+                onDismiss = { isShow = false }
+            )
+        }
+    }
+}
+
+
+@Composable
+fun NetworkErrorScreen(){
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        Text(text = "네크워크 에러", modifier = Modifier.align(Center))
+
+    }
+}
+
+@Composable
+fun AllergyCategoryComponent(
     data : TestCategory,
     isSelected : Boolean,
     onClick: (TestCategory) -> Unit
@@ -504,7 +527,7 @@ fun CategoryComponent(
 }
 
 @Composable
-fun ContentComponent(
+fun AllergyContentComponent(
     data : TestContent,
     isSelected: Boolean,
     onClick: (TestContent) -> Unit
@@ -541,7 +564,7 @@ fun ContentComponent(
 }
 
 @Composable
-fun TestTag(
+fun AllergyTagComponent(
     modifier: Modifier = Modifier,
     data: TestContent,
     onDeleteClick : (TestContent) -> Unit
@@ -589,7 +612,231 @@ fun TestTag(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AllergyContent(
+    data : TestData,
+    selectList : List<TestContent>,
+    onSelect : (List<TestContent>) -> Unit,
+    onDismiss: () -> Unit
+){
+    var selectContentList by remember{ mutableStateOf(selectList) }
+    var selectIndex by remember{ mutableStateOf(0) }
+    val categoryState = rememberScrollState()
+    val contentState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+
+    Surface(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(top = 24.dp),
+        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(TopCenter)
+                    .padding(bottom = 56.dp)
+            ){
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Divider(
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(4.5.dp))
+                            .align(CenterHorizontally),
+                        color = Color(0xffd9d9d9)
+                    )
+
+
+                    AppText(
+                        text = "알레르기 선택",
+                        style = TextStyle(
+                            fontSize = 17.dp.textSp,
+                            fontWeight = FontWeight.W700,
+                            color = Color(0xff111111),
+                            fontFamily = Font.nanumSquareRoundFont,
+                            lineHeight = 19.dp.textSp
+                        ),
+                        modifier = Modifier
+                            .align(CenterHorizontally)
+                            .padding(top = 17.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Spacer(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0xfff0f0f0))
+                    )
+
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xfffafafa))
+                            .wrapContentHeight()
+                            .animateContentSize()
+                    ) {
+                        if(selectContentList.isNotEmpty()){
+                            LazyRow(
+                                modifier = Modifier
+                                    .padding(vertical = 13.dp)
+                            ) {
+                                item{
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                }
+
+                                items(
+                                    items = selectContentList,
+                                    key = { it.title }
+                                ){
+                                    AllergyTagComponent(
+                                        modifier = Modifier
+                                            .animateItemPlacement(),
+                                        data = it,
+                                        onDeleteClick = { data ->
+                                            selectContentList -= data
+                                        }
+                                    )
+                                }
+
+                                item{
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color(0xfff0f0f0))
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxSize()
+                ){
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(120.dp)
+                            .background(Color(0xfffafafa))
+                            .verticalScroll(categoryState)
+                    ) {
+                        for(i in 0 until data.list.size){
+                            AllergyCategoryComponent(
+                                data = data.list[i],
+                                isSelected = data.list[i].id == selectIndex,
+                                onClick = {
+                                    if(selectIndex == it.id) scope.launch { contentState.animateScrollTo(0) }
+                                    else{
+                                        selectIndex = it.id
+                                        scope.launch { contentState.scrollTo(0) }
+                                    }
+                                }
+                            )
+                        }
+
+                    }
+
+                    Spacer(modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(Color(0xfff0f0f0))
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(contentState)
+                    ) {
+                        for(i in 0 until data.list[selectIndex].contentList.size){
+                            AllergyContentComponent(
+                                data = data.list[selectIndex].contentList[i],
+                                isSelected = selectContentList.contains(data.list[selectIndex].contentList[i]),
+                                onClick = {
+                                    val list = if(selectContentList.contains(it)){
+                                        selectContentList - it
+                                    }else{
+                                        if(selectContentList.size > 9) return@AllergyContentComponent
+                                        listOf(it) + selectContentList
+                                    }
+                                    selectContentList = list
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .align(BottomCenter)
+                    .background(Color(0xffff4857))
+                    .clickable {
+                        val sortedList =
+                            selectContentList.sortedWith(compareBy<TestContent> { it.categoryId }.thenBy { it.id })
+                        onSelect.invoke(sortedList)
+                    }
+            ) {
+                AppText(
+                    modifier = Modifier.align(Center),
+                    text = "설정하기",
+                    style = TextStyle(
+                        fontSize = 16.dp.textSp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontFamily = Font.nanumSquareRoundFont
+                    )
+                )
+
+                Box(
+                    modifier = Modifier
+                        .align(CenterEnd)
+                        .padding(end = 20.dp)
+                        .wrapContentWidth()
+                        .height(24.dp)
+                        .background(
+                            color = Color.White,
+                            shape = RoundedCornerShape(100.dp)
+                        )
+                ) {
+                    ColoredText(
+                        modifier = Modifier
+                            .align(Center)
+                            .padding(horizontal = 10.dp),
+                        text = "${selectContentList.size} / 10",
+                        targetText = selectContentList.size.toString(),
+                        targetType = ColorTextType.Single,
+                        targetColor = Color(0xffff4857),
+                        targetWeight = FontWeight.W700,
+                        style = TextStyle(
+                            fontSize = 11.dp.textSp,
+                            fontWeight = FontWeight.W400,
+                            color = Color(0xffff4857),
+                            fontFamily = Font.nanumSquareRoundFont
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun TestSheet(
     data : TestData,
@@ -597,23 +844,6 @@ fun TestSheet(
     onSelect : (List<TestContent>) -> Unit,
     onDismiss: () -> Unit
 ){
-
-    var selectContentList by remember{ mutableStateOf(selectList) }
-    var selectIndex by remember{ mutableStateOf(0) }
-    var tagListType by remember{ mutableStateOf(0) }
-    val arrowRotation = remember{ Animatable(0f) }
-    var isVisibleArrow by remember{ mutableStateOf(false) }
-    val categoryState = rememberScrollState()
-    val contentState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
-
-    LaunchedEffect(tagListType){
-        arrowRotation.animateTo(
-            if(tagListType == 0) 0f else -180f
-        )
-    }
 
     CustomBottomSheetDialog(
         onDismissRequest = {
@@ -630,379 +860,12 @@ fun TestSheet(
             )
         )
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(top = 24.dp),
-            shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .align(TopCenter)
-                        .padding(bottom = 56.dp)
-                ){
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Divider(
-                            modifier = Modifier
-                                .width(36.dp)
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(4.5.dp))
-                                .align(CenterHorizontally),
-                            color = Color(0xffd9d9d9)
-                        )
-
-
-                        AppText(
-                            text = "알레르기 선택",
-                            style = TextStyle(
-                                fontSize = 17.dp.textSp,
-                                fontWeight = FontWeight.W700,
-                                color = Color(0xff111111),
-                                fontFamily = Font.nanumSquareRoundFont,
-                                lineHeight = 19.dp.textSp
-                            ),
-                            modifier = Modifier
-                                .align(CenterHorizontally)
-                                .padding(top = 17.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        Spacer(modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(Color(0xfff0f0f0))
-                        )
-
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xfffafafa))
-                                .wrapContentHeight()
-                                .animateContentSize()
-                        ) {
-                            if(selectContentList.isNotEmpty()){
-                                if(tagListType == 0){
-                                    LazyRow(
-                                        modifier = Modifier
-                                            .padding(vertical = 13.dp)
-                                            .onGloballyPositioned {
-                                                isVisibleArrow = it.size.width >= screenWidth.toInt()
-                                            }
-                                    ) {
-                                        item{
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                        }
-
-                                        items(
-                                            items = selectContentList,
-                                            key = { it.title }
-                                        ){
-                                            TestTag(
-                                                modifier = Modifier
-                                                    .animateItemPlacement(),
-                                                data = it,
-                                                onDeleteClick = { data ->
-                                                    selectContentList -= data
-                                                }
-                                            )
-                                        }
-
-                                        item{
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                        }
-                                    }
-                                }else{
-                                    FlowRow(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 13.dp)
-                                            .onGloballyPositioned {
-                                                isVisibleArrow = it.size.height >= 69.dpToPixels(context)
-                                            }
-                                    ) {
-                                        selectContentList.forEach { item ->
-                                            TestTag(
-                                                data = item,
-                                                onDeleteClick = { data ->
-                                                    selectContentList -= data
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .wrapContentHeight()
-                                            .animateContentSize()
-                                    ) {
-                                        if(isVisibleArrow){
-                                            Row(
-                                                modifier = Modifier
-                                                    .align(CenterHorizontally)
-                                                    .clickable {
-                                                        tagListType = if (tagListType == 0) 1 else 0
-                                                    }
-                                            ) {
-                                                AppText(
-                                                    modifier = Modifier
-                                                        .padding(end = 4.dp)
-                                                        .align(CenterVertically),
-                                                    text = if(tagListType == 0) "펼쳐보기" else "닫기",
-                                                    style = TextStyle(
-                                                        fontSize = 12.dp.textSp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xff111111),
-                                                        fontFamily = Font.nanumSquareRoundFont
-                                                    )
-                                                )
-
-                                                Image(
-                                                    painter = painterResource(id = R.drawable.ico_arrow_close_svg),
-                                                    contentDescription = "",
-                                                    modifier = Modifier
-                                                        .size(16.dp)
-                                                        .align(CenterVertically)
-                                                        .rotate(arrowRotation.value)
-                                                )
-                                            }
-
-
-                                            Spacer(modifier = Modifier.height(14.dp))
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(Color(0xfff0f0f0))
-                                    )
-                                }
-
-
-
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxSize()
-                    ){
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(120.dp)
-                                .background(Color(0xfffafafa))
-                                .verticalScroll(categoryState)
-                        ) {
-                            for(i in 0 until data.list.size){
-                                CategoryComponent(
-                                    data = data.list[i],
-                                    isSelected = data.list[i].id == selectIndex,
-                                    onClick = {
-                                        if(selectIndex == it.id) scope.launch { contentState.animateScrollTo(0) }
-                                        else{
-                                            selectIndex = it.id
-                                            scope.launch { contentState.scrollTo(0) }
-                                        }
-                                    }
-                                )
-                            }
-
-                        }
-
-                        Spacer(modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .background(Color(0xfff0f0f0))
-                        )
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(contentState)
-                        ) {
-                            for(i in 0 until data.list[selectIndex].contentList.size){
-                                ContentComponent(
-                                    data = data.list[selectIndex].contentList[i],
-                                    isSelected = selectContentList.contains(data.list[selectIndex].contentList[i]),
-                                    onClick = {
-                                        val list = if(selectContentList.contains(it)){
-                                            selectContentList - it
-                                        }else{
-                                            if(selectContentList.size > 9) return@ContentComponent
-                                            listOf(it) + selectContentList
-                                        }
-                                        selectContentList = list
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .align(BottomCenter)
-                        .background(Color(0xffff4857))
-                        .clickable {
-                            val sortedList =
-                                selectContentList.sortedWith(compareBy<TestContent> { it.categoryId }.thenBy { it.id })
-                            onSelect.invoke(sortedList)
-                        }
-                ) {
-                    AppText(
-                        modifier = Modifier.align(Center),
-                        text = "설정하기",
-                        style = TextStyle(
-                            fontSize = 16.dp.textSp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontFamily = Font.nanumSquareRoundFont
-                        )
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .align(CenterEnd)
-                            .padding(end = 20.dp)
-                            .wrapContentWidth()
-                            .height(24.dp)
-                            .background(
-                                color = Color.White,
-                                shape = RoundedCornerShape(100.dp)
-                            )
-                    ) {
-                        ColoredText(
-                            modifier = Modifier
-                                .align(Center)
-                                .padding(horizontal = 10.dp),
-                            text = "${selectContentList.size} / 10",
-                            targetText = selectContentList.size.toString(),
-                            targetType = ColorTextType.Single,
-                            targetColor = Color(0xffff4857),
-                            targetWeight = FontWeight.W700,
-                            style = TextStyle(
-                                fontSize = 11.dp.textSp,
-                                fontWeight = FontWeight.W400,
-                                color = Color(0xffff4857),
-                                fontFamily = Font.nanumSquareRoundFont
-                            )
-                        )
-                    }
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(BottomCenter)
-                ) {
-
-//                    AnimatedVisibility(
-//                        visible = selectContentList.isNotEmpty(),
-//                        enter = slideInVertically{ it },
-//                        exit = slideOutVertically{ it }
-//                    ) {
-//                        Card(
-//                            modifier = Modifier
-//                                .fillMaxWidth()
-//                                .shadow(
-//                                    elevation = 8.dp,
-//                                    spotColor = Color(0x0D000000)
-//                                )
-//                                .background(Color.White)
-//                        ) {
-//                            Column(
-//                                modifier = Modifier
-//                                    .fillMaxWidth()
-//                            ) {
-//                                LazyRow(
-//                                    modifier = Modifier
-//                                        .padding(top = 20.dp),
-//                                    state = tagState
-//                                ) {
-//                                    item{
-//                                        Spacer(modifier = Modifier.width(20.dp))
-//                                    }
-//
-//                                    items(
-//                                        items = selectContentList,
-//                                        key = { it.title }
-//                                    ){
-//                                        TestTag(
-//                                            modifier = Modifier
-//                                                .animateItemPlacement()
-//                                                .background(Color.White)
-//                                            ,
-//                                            data = it,
-//                                            onDeleteClick = { data ->
-//                                                selectContentList -= data
-//                                            }
-//                                        )
-//                                    }
-//
-//                                    item{
-//                                        Spacer(modifier = Modifier.width(12.dp))
-//                                    }
-//                                }
-//
-//                                Row(
-//                                    modifier = Modifier
-//                                        .padding(vertical = 20.dp)
-//                                        .padding(start = 20.dp)
-//                                ){
-//                                    Spacer(
-//                                        modifier = Modifier
-//                                            .size(5.dp)
-//                                            .padding(1.dp)
-//                                            .background(
-//                                                color = Color(0xffaaaaaa),
-//                                                shape = CircleShape
-//                                            )
-//                                            .align(CenterVertically)
-//
-//                                    )
-//
-//                                    Spacer(modifier = Modifier.width(4.dp))
-//
-//                                    AppText(
-//                                        text = "최대 10개까지 선책 가능합니다.",
-//                                        style = TextStyle(
-//                                            fontSize = 12.dp.textSp,
-//                                            fontWeight = FontWeight.W400,
-//                                            color = Color(0xffaaaaaa),
-//                                            fontFamily = Font.nanumSquareRoundFont,
-//                                            lineHeight = 18.dp.textSp
-//                                        ),
-//                                        modifier = Modifier.align(CenterVertically)
-//                                    )
-//                                }
-//                            }
-//                        }
-//                    }
-
-
-                }
-            }
-        }
+        AllergyContent(
+            data = data,
+            selectList = selectList,
+            onSelect = onSelect,
+            onDismiss = onDismiss
+        )
     }
 }
 
