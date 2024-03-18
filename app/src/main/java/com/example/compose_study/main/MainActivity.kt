@@ -109,6 +109,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -174,21 +175,20 @@ const val POINT_PADDING = 14
 const val BOTTOM_PADDING = 22
 
 data class TestData(
-    val list : List<TestCategory>
+    val list: List<TestCategory>
 )
+
 data class TestCategory(
-    val id : Int,
-    val title : String,
-    val contentList : List<TestContent>
+    val id: Int,
+    val title: String,
+    val contentList: List<TestContent>
 )
 
 data class TestContent(
-    val categoryId : Int,
-    val id : Int,
-    val title : String
+    val categoryId: Int,
+    val id: Int,
+    val title: String
 )
-
-
 
 
 class MainActivity : ComponentActivity() {
@@ -322,13 +322,61 @@ class MainActivity : ComponentActivity() {
         GraphPoint(29, "09-30", null)
     )
 
-    enum class PetBodyType(val index:Int,val typeStr: String,val topImg:Int?,val sideImg:Int?,val notice:Array<String>) {
-        UNKNOWN(0,"체형을 선택해 주세요",null,null, arrayOf()),
-        EX_UNDERWEIGHT(1,"극저체중",R.drawable.img_ex_underweight_top,R.drawable.img_ex_underweight_side, arrayOf("갈비뼈가 눈에도 확연히 보이며 아주 쉽게 만져짐","척추, 갈비뼈, 골반뼈가 멀리서도 보일 정도로 두드러짐","눈에 보이는 체지방이 없고 근육량 또한 적음")),
-        UNDERWEIGHT(2,"저체중",R.drawable.img_underweight_top,R.drawable.img_underweight_side, arrayOf("갈비뼈가 쉽게 만져짐","척추, 갈비뼈의 굴곡이 보이며, 골반뼈가 명확하게 보임","옆에서 봤을 때 허리가 뚜렷하며 복부가 오목함")),
-        NORMAL(3,"보통",R.drawable.img_normal_top,R.drawable.img_normal_side, arrayOf("과도한 지방층 없이 갈비뼈가 만져짐","위에서 봤을 때 갈비뼈와 허리를 볼 수 있음","옆에서 봤을 때 복부가 위로 올라간 모습이 보임")),
-        OVERWEIGHT(4,"과체중",R.drawable.img_overweight_top,R.drawable.img_overweight_side, arrayOf("지방층이 살짝 있는 상태에서 갈비뼈가 만져짐","위에서 봤을 때 허리가 구별되지만 뚜렷하지 않음","옆에서 봤을 때 복부의 오목한 부분이 없거나 잘 보이지 않음")),
-        EX_OVERWEIGHT(5,"비만",R.drawable.img_ex_overweight_top,R.drawable.img_ex_overweight_side, arrayOf("갈비뼈가 만져지지 않거나 상당히 압력을 가해야만 만질 수 있음","위에서 봤을 때 허리가 구별되지 않음","옆에서 봤을 때 복부의 오목한 부분이 없고 복부 팽창이 있음"))
+    enum class PetBodyType(
+        val index: Int,
+        val typeStr: String,
+        val topImg: Int?,
+        val sideImg: Int?,
+        val notice: Array<String>
+    ) {
+        UNKNOWN(0, "체형을 선택해 주세요", null, null, arrayOf()),
+        EX_UNDERWEIGHT(
+            1,
+            "극저체중",
+            R.drawable.img_ex_underweight_top,
+            R.drawable.img_ex_underweight_side,
+            arrayOf(
+                "갈비뼈가 눈에도 확연히 보이며 아주 쉽게 만져짐",
+                "척추, 갈비뼈, 골반뼈가 멀리서도 보일 정도로 두드러짐",
+                "눈에 보이는 체지방이 없고 근육량 또한 적음"
+            )
+        ),
+        UNDERWEIGHT(
+            2,
+            "저체중",
+            R.drawable.img_underweight_top,
+            R.drawable.img_underweight_side,
+            arrayOf("갈비뼈가 쉽게 만져짐", "척추, 갈비뼈의 굴곡이 보이며, 골반뼈가 명확하게 보임", "옆에서 봤을 때 허리가 뚜렷하며 복부가 오목함")
+        ),
+        NORMAL(
+            3,
+            "보통",
+            R.drawable.img_normal_top,
+            R.drawable.img_normal_side,
+            arrayOf("과도한 지방층 없이 갈비뼈가 만져짐", "위에서 봤을 때 갈비뼈와 허리를 볼 수 있음", "옆에서 봤을 때 복부가 위로 올라간 모습이 보임")
+        ),
+        OVERWEIGHT(
+            4,
+            "과체중",
+            R.drawable.img_overweight_top,
+            R.drawable.img_overweight_side,
+            arrayOf(
+                "지방층이 살짝 있는 상태에서 갈비뼈가 만져짐",
+                "위에서 봤을 때 허리가 구별되지만 뚜렷하지 않음",
+                "옆에서 봤을 때 복부의 오목한 부분이 없거나 잘 보이지 않음"
+            )
+        ),
+        EX_OVERWEIGHT(
+            5,
+            "비만",
+            R.drawable.img_ex_overweight_top,
+            R.drawable.img_ex_overweight_side,
+            arrayOf(
+                "갈비뼈가 만져지지 않거나 상당히 압력을 가해야만 만질 수 있음",
+                "위에서 봤을 때 허리가 구별되지 않음",
+                "옆에서 봤을 때 복부의 오목한 부분이 없고 복부 팽창이 있음"
+            )
+        )
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -341,140 +389,232 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
 
-                BaseScreen{Screen()}
+                PingSlider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        //.padding(horizontal = 30.dp)
+                        .height(100.dp),
+                    initValue = 0,
+                    barHeight = 15.dp,
+                    markerSize = Size(12f,12f),
+                    markerPainter = painterResource(id = R.drawable.img_slider),
+                    onChangeValue = {  },
+                    onChangeIndex = {  }
+                )
             }
         }
     }
 }
 
-@Composable
-fun Screen(){
-    val list = TestData(
-        listOf(
-            TestCategory(
-                0,
-                "육류",
-                listOf(
-                    TestContent(0,0,"소고기"),
-                    TestContent(0,1,"돼지고기"),
-                    TestContent(0,2,"염소고기"),
-                    TestContent(0,3,"양고기"),
-                    TestContent(0,4,"토끼고기"),
-                    TestContent(0,5,"닭고기"),
-                    TestContent(0,6,"메추라기 고기"),
-                    TestContent(0,7,"오리고기"),
-                    TestContent(0,8,"칠면조 고기")
-                )
-            ),
-            TestCategory(
-                1,
-                "생선",
-                listOf(
-                    TestContent(1,0,"연어"),
-                    TestContent(1,1,"참치"),
-                    TestContent(1,2,"대구"),
-                    TestContent(1,3,"고등어"),
-                    TestContent(1,4,"멸치"),
-                    TestContent(1,5,"농어"),
-                    TestContent(1,6,"정어리"),
-                    TestContent(1,7,"청어"),
-                    TestContent(1,8,"송어"),
-                    TestContent(1,9,"새우"),
-                    TestContent(1,10,"게"),
-                    TestContent(1,11,"조개")
-                )
-            ),
-            TestCategory(
-                2,
-                "곡물 & 견과",
-                listOf(
-                    TestContent(2,0,"쌀"),
-                    TestContent(2,1,"밀, 글루텐"),
-                    TestContent(2,2,"콩 (대두)"),
-                    TestContent(2,3,"렌즈 콩"),
-                    TestContent(2,4,"완두콩"),
-                    TestContent(2,5,"보리"),
-                    TestContent(2,6,"메밀"),
-                    TestContent(2,7,"귀리"),
-                    TestContent(2,8,"조"),
-                    TestContent(2,9,"아마 씨"),
-                    TestContent(2,10,"옥수수"),
-                    TestContent(2,11,"땅콩"),
-                    TestContent(2,12,"생밤"),
-                    TestContent(2,13,"빵 효모"),
-                    TestContent(2,14,"맥주 효모")
-                )
-            ),
-            TestCategory(
-                3,
-                "과일",
-                listOf(
-                    TestContent(3,0,"귤, 레몬, 라임"),
-                    TestContent(3,1,"키위"),
-                    TestContent(3,2,"파인애플"),
-                    TestContent(3,3,"망고"),
-                    TestContent(3,4,"복숭아"),
-                    TestContent(3,5,"자두"),
-                    TestContent(3,6,"딸기"),
-                    TestContent(3,7,"블루베리"),
-                    TestContent(3,8,"멜론"),
-                    TestContent(3,9,"수박")
-                )
-            ),
-            TestCategory(
-                4,
-                "유제품",
-                listOf(
-                    TestContent(4,0,"계란"),
-                    TestContent(4,1,"우유"),
-                    TestContent(4,2,"체다 치즈"),
-                    TestContent(4,3,"요거트"),
-                    TestContent(4,4,"버터"),
-                    TestContent(4,5,"카제인")
-                )
-            ),
-            TestCategory(
-                5,
-                "야채",
-                listOf(
-                    TestContent(5,0,"오이"),
-                    TestContent(5,1,"토마토"),
-                    TestContent(5,2,"감자"),
-                    TestContent(5,3,"고구마"),
-                    TestContent(5,4,"양상추"),
-                    TestContent(5,5,"시금치"),
-                    TestContent(5,6,"파프리카"),
-                    TestContent(5,7,"파슬리"),
-                    TestContent(5,8,"비트"),
-                    TestContent(5,9,"알로에 베라"),
-                    TestContent(5,10,"브로콜리")
-                )
-            ),
-            TestCategory(
-                6,
-                "기타",
-                listOf(
-                    TestContent(6,0,"번데기"),
-                    TestContent(6,1,"베이킹 파우더"),
-                    TestContent(6,2,"기타")
-                )
-            )
-        )
-    )
+const val BASE_PADDING = 5
+const val LINE_BASE_PADDING = 36
 
-    var isShow by remember{ mutableStateOf(false) }
-    var selectList by remember{ mutableStateOf<List<TestContent>>(listOf()) }
+@Composable
+fun PingSlider(
+    modifier: Modifier,
+    initValue: Int,
+    xLabel: List<String> = listOf("1", "2", "3", "4", "5"),
+    activeColor: Color = Color(0xffff4857),
+    backgroundColor: Color = Color(0xffdddddd),
+    activeTextColor: Color = Color.Black,
+    basicTextColor: Color = Color.Blue,
+    textSize: Int = 13,
+    barHeight: Dp = 8.dp,
+    markerPainter: Painter,
+    markerSize: Size = Size(52f,52f),
+    textTypefacePath: String? = null,
+    onChangeValue: (Float) -> Unit,
+    onChangeIndex: (Int) -> Unit
+) {
+
+    val basePadding = (markerSize.width.toInt() / 2)
+    val configuration = LocalConfiguration.current
+    val context = LocalContext.current
+
+    var screenWidth by remember{ mutableStateOf(configuration.screenWidthDp.dpToPixels(context)) }
+    var screenHeight by remember{ mutableStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    var endOffset by remember{ mutableStateOf(screenWidth - markerSize.width.toInt().dpToPixels(context))}
+    val halfWidth = (markerSize.width.toInt() / 2)
+    val halfHeight = (markerSize.height.toInt() / 2)
+
+
+    @Composable
+    fun textPaint(textColor: Int) = remember(density) {
+        Paint().apply {
+            color = textColor
+            textAlign = Paint.Align.CENTER
+            this.textSize = density.run { textSize.dp.toPx() }
+            isAntiAlias = true
+            textTypefacePath?.let {
+                Typeface.createFromAsset(context.resources.assets, it).run {
+                    typeface = Typeface.create(this, Typeface.NORMAL)
+                }
+            }
+        }
+    }
+
+    val slideTextPaintBasic = textPaint(basicTextColor.toArgb())
+    val slideTextPaintSelect = textPaint(activeTextColor.toArgb())
+
+    fun calculateNewOffset(offsetX: Float): Float {
+        val cnt = (xLabel.size - 1) * 2
+        val interval = endOffset / cnt
+        for (i in 0 until cnt) {
+            val start = (interval * i)
+            val end = (interval * (i + 1))
+
+            if (offsetX in start..end) {
+                return if (i % 2 == 0) start else end
+            }
+            if (i == cnt - 1 && offsetX > end) return end
+        }
+
+        return 0f
+    }
+
+    fun getOffset(index: Int): Float {
+        val interval = endOffset / (xLabel.size - 1)
+
+        return calculateNewOffset((interval * (index.let { if (it == 0) 1 else it } - 1)) + 10.dpToPixels(
+            context
+        ))
+    }
+
+    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
+        EditableOffset(
+            Animatable(getOffset(initValue)).apply {
+                updateBounds(0f, endOffset)
+            }
+        )
+    }
+
+    var selectIndex by remember { mutableStateOf(0f) }
+    var selectIndexInt by remember { mutableStateOf(0) }
+
+    LaunchedEffect(key1 = offsetX.offset.value, block = {
+        offsetX.offset.value.let {
+            val interval = endOffset / (xLabel.size - 1)
+            selectIndex = (it / interval) + 1f
+            onChangeValue.invoke(selectIndex)
+        }
+    })
+
+    LaunchedEffect(key1 = selectIndex) {
+        selectIndexInt = round(selectIndex).toInt()
+    }
+
+    LaunchedEffect(key1 = selectIndexInt) {
+        onChangeIndex.invoke(selectIndexInt)
+    }
+
+    LaunchedEffect(key1 = screenWidth) {
+        if (currentScreenWidth != 0f && screenWidth != currentScreenWidth) {
+            val scale = screenWidth / currentScreenWidth
+            offsetX.offset.updateBounds(0f, endOffset)
+            scope.launch {
+                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
+            }
+        }
+        currentScreenWidth = screenWidth
+    }
+
+    Box(
+        modifier = modifier.then(
+            Modifier
+                .pointerInput(Unit) {
+                    detectTapGestures {
+
+                        scope.launch {
+                            offsetX.offset.animateTo(calculateNewOffset(it.x - halfWidth.dpToPixels(context)))
+                        }
+                    }
+                }
+                .onGloballyPositioned {
+                    screenWidth = it.size.width.toFloat()
+                    screenHeight = it.size.height.toFloat()
+                    endOffset = it.size.width.toFloat() - markerSize.width.toInt().dpToPixels(context)
+                    offsetX.offset.updateBounds(0f,endOffset)
+                }
+        )
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = basePadding.dp)
+                .align(TopCenter)
+        ) {
+
+            drawLine(
+                color = backgroundColor,
+                Offset(0f, halfHeight.dp.toPx()),
+                Offset(size.width, halfHeight.dp.toPx()),
+                strokeWidth = barHeight.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            drawLine(
+                color = activeColor,
+                Offset(0f, halfHeight.dp.toPx()),
+                Offset(offsetX.offset.value, halfHeight.dp.toPx()),
+                strokeWidth = barHeight.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            for (i in xLabel.indices) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    xLabel[i],
+                    ((size.width / (xLabel.size - 1)) * i),
+                    screenHeight,
+                    if (i + 1 == selectIndexInt) slideTextPaintSelect else slideTextPaintBasic
+                )
+            }
+        }
+
+        Image(
+            painter = markerPainter,
+            contentDescription = "",
+            modifier = Modifier
+                .size(markerSize.width.dp,markerSize.height.dp)
+                .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { _, dragAmount ->
+                            scope.launch {
+                                offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
+                            }
+                        },
+                        onDragEnd = {
+                            scope.launch {
+                                offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
+                            }
+                        }
+                    )
+                },
+            contentScale = ContentScale.FillBounds
+        )
+    }
+}
+
+@Composable
+fun Screen() {
+
+
+    var isShow by remember { mutableStateOf(false) }
+    var selectList by remember { mutableStateOf<List<TestContent>>(listOf()) }
 
     Surface(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        BasicScreen(list = selectList){ isShow = true }
+        BasicScreen(list = selectList) { isShow = true }
 
-        if(isShow){
+        if (isShow) {
             TestSheet(
-                data = list,
+                data = TestData(listOf()),
                 selectList = selectList,
                 onSelect = {
                     selectList = it
@@ -488,22 +628,65 @@ fun Screen(){
 
 
 @Composable
-fun NetworkErrorScreen(){
+fun NetworkErrorScreen() {
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xfffafafa))
     ) {
 
-        Text(text = "네크워크 에러", modifier = Modifier.align(Center))
+        Column(
+            modifier = Modifier.align(Center)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.img_ping),
+                contentDescription = "",
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(140.dp)
+                    .align(CenterHorizontally)
+            )
+
+            AppText(
+                text = "네크워크 오류",
+                style = TextStyle(
+                    fontSize = 20.dp.textSp,
+                    fontWeight = FontWeight.W700,
+                    color = Color(0xffbbbbbb),
+                    fontFamily = Font.nanumSquareRoundFont,
+                    lineHeight = 30.dp.textSp
+                ),
+                modifier = Modifier
+                    .align(CenterHorizontally)
+                    .padding(top = 16.dp)
+            )
+
+            AppText(
+                text = "네크워크 연결 상태가 좋지 않습니다.\n확인 후 다시 시도해 주세요.",
+                style = TextStyle(
+                    fontSize = 14.dp.textSp,
+                    fontWeight = FontWeight.W400,
+                    color = Color(0xffbbbbbb),
+                    fontFamily = Font.nanumSquareRoundFont,
+                    lineHeight = 22.dp.textSp,
+                    textAlign = TextAlign.Center
+                ),
+                modifier = Modifier
+                    .align(CenterHorizontally)
+                    .padding(top = 10.dp)
+            )
+        }
+
 
     }
 }
 
 @Composable
 fun AllergyCategoryComponent(
-    data : TestCategory,
-    isSelected : Boolean,
+    data: TestCategory,
+    isSelected: Boolean,
     onClick: (TestCategory) -> Unit
-){
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -518,8 +701,8 @@ fun AllergyCategoryComponent(
             text = data.title,
             style = TextStyle(
                 fontSize = 16.dp.textSp,
-                fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if(isSelected) Color(0xff111111) else Color(0xff444444),
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color(0xff111111) else Color(0xff444444),
                 fontFamily = Font.nanumSquareRoundFont
             )
         )
@@ -528,10 +711,10 @@ fun AllergyCategoryComponent(
 
 @Composable
 fun AllergyContentComponent(
-    data : TestContent,
+    data: TestContent,
     isSelected: Boolean,
     onClick: (TestContent) -> Unit
-){
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -546,14 +729,14 @@ fun AllergyContentComponent(
             text = data.title,
             style = TextStyle(
                 fontSize = 16.dp.textSp,
-                fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if(isSelected) Color(0xff111111) else Color(0xff444444),
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color(0xff111111) else Color(0xff444444),
                 fontFamily = Font.nanumSquareRoundFont
             )
         )
 
         Image(
-            painter = painterResource(id = if(isSelected) R.drawable.toggle_on_svg else R.drawable.toggle_off_svg),
+            painter = painterResource(id = if (isSelected) R.drawable.toggle_on_svg else R.drawable.toggle_off_svg),
             contentDescription = "",
             modifier = Modifier
                 .align(CenterEnd)
@@ -567,8 +750,8 @@ fun AllergyContentComponent(
 fun AllergyTagComponent(
     modifier: Modifier = Modifier,
     data: TestContent,
-    onDeleteClick : (TestContent) -> Unit
-){
+    onDeleteClick: (TestContent) -> Unit
+) {
     Row(
         modifier = modifier
             .padding(horizontal = 4.dp, vertical = 5.dp)
@@ -615,13 +798,13 @@ fun AllergyTagComponent(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AllergyContent(
-    data : TestData,
-    selectList : List<TestContent>,
-    onSelect : (List<TestContent>) -> Unit,
+    data: TestData,
+    selectList: List<TestContent>,
+    onSelect: (List<TestContent>) -> Unit,
     onDismiss: () -> Unit
-){
-    var selectContentList by remember{ mutableStateOf(selectList) }
-    var selectIndex by remember{ mutableStateOf(0) }
+) {
+    var selectContentList by remember { mutableStateOf(selectList) }
+    var selectIndex by remember { mutableStateOf(0) }
     val categoryState = rememberScrollState()
     val contentState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -640,7 +823,7 @@ fun AllergyContent(
                     .fillMaxSize()
                     .align(TopCenter)
                     .padding(bottom = 56.dp)
-            ){
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -674,10 +857,11 @@ fun AllergyContent(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    Spacer(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Color(0xfff0f0f0))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color(0xfff0f0f0))
                     )
 
 
@@ -688,19 +872,19 @@ fun AllergyContent(
                             .wrapContentHeight()
                             .animateContentSize()
                     ) {
-                        if(selectContentList.isNotEmpty()){
+                        if (selectContentList.isNotEmpty()) {
                             LazyRow(
                                 modifier = Modifier
                                     .padding(vertical = 13.dp)
                             ) {
-                                item{
+                                item {
                                     Spacer(modifier = Modifier.width(16.dp))
                                 }
 
                                 items(
                                     items = selectContentList,
                                     key = { it.title }
-                                ){
+                                ) {
                                     AllergyTagComponent(
                                         modifier = Modifier
                                             .animateItemPlacement(),
@@ -711,15 +895,16 @@ fun AllergyContent(
                                     )
                                 }
 
-                                item{
+                                item {
                                     Spacer(modifier = Modifier.width(16.dp))
                                 }
                             }
 
-                            Spacer(modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(Color(0xfff0f0f0))
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(Color(0xfff0f0f0))
                             )
                         }
                     }
@@ -727,7 +912,7 @@ fun AllergyContent(
 
                 Row(
                     modifier = Modifier.fillMaxSize()
-                ){
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxHeight()
@@ -735,13 +920,17 @@ fun AllergyContent(
                             .background(Color(0xfffafafa))
                             .verticalScroll(categoryState)
                     ) {
-                        for(i in 0 until data.list.size){
+                        for (i in 0 until data.list.size) {
                             AllergyCategoryComponent(
                                 data = data.list[i],
                                 isSelected = data.list[i].id == selectIndex,
                                 onClick = {
-                                    if(selectIndex == it.id) scope.launch { contentState.animateScrollTo(0) }
-                                    else{
+                                    if (selectIndex == it.id) scope.launch {
+                                        contentState.animateScrollTo(
+                                            0
+                                        )
+                                    }
+                                    else {
                                         selectIndex = it.id
                                         scope.launch { contentState.scrollTo(0) }
                                     }
@@ -751,10 +940,11 @@ fun AllergyContent(
 
                     }
 
-                    Spacer(modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .background(Color(0xfff0f0f0))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .background(Color(0xfff0f0f0))
                     )
 
                     Column(
@@ -762,15 +952,15 @@ fun AllergyContent(
                             .fillMaxSize()
                             .verticalScroll(contentState)
                     ) {
-                        for(i in 0 until data.list[selectIndex].contentList.size){
+                        for (i in 0 until data.list[selectIndex].contentList.size) {
                             AllergyContentComponent(
                                 data = data.list[selectIndex].contentList[i],
                                 isSelected = selectContentList.contains(data.list[selectIndex].contentList[i]),
                                 onClick = {
-                                    val list = if(selectContentList.contains(it)){
+                                    val list = if (selectContentList.contains(it)) {
                                         selectContentList - it
-                                    }else{
-                                        if(selectContentList.size > 9) return@AllergyContentComponent
+                                    } else {
+                                        if (selectContentList.size > 9) return@AllergyContentComponent
                                         listOf(it) + selectContentList
                                     }
                                     selectContentList = list
@@ -839,11 +1029,11 @@ fun AllergyContent(
 
 @Composable
 fun TestSheet(
-    data : TestData,
-    selectList : List<TestContent>,
-    onSelect : (List<TestContent>) -> Unit,
+    data: TestData,
+    selectList: List<TestContent>,
+    onSelect: (List<TestContent>) -> Unit,
     onDismiss: () -> Unit
-){
+) {
 
     CustomBottomSheetDialog(
         onDismissRequest = {
@@ -871,10 +1061,10 @@ fun TestSheet(
 
 @Composable
 fun BasicScreen(
-    list : List<TestContent>,
+    list: List<TestContent>,
     onClick: () -> Unit
-){
-    Box(modifier = Modifier.fillMaxSize()){
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.align(Center)
         ) {
@@ -884,9 +1074,9 @@ fun BasicScreen(
                 Text(text = "선택하기")
             }
 
-            if(list.isNotEmpty()){
-                val title = if(list.size == 1) list[0].title
-                else "${list[0].title} 외 ${list.size-1}개"
+            if (list.isNotEmpty()) {
+                val title = if (list.size == 1) list[0].title
+                else "${list[0].title} 외 ${list.size - 1}개"
                 Text(
                     text = title,
                     modifier = Modifier.padding(top = 30.dp)
@@ -899,9 +1089,9 @@ fun BasicScreen(
 
 @Composable
 fun TestScreen(
-    onSelectClick : () -> Unit,
+    onSelectClick: () -> Unit,
     onBackClick: () -> Unit
-){
+) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -910,7 +1100,7 @@ fun TestScreen(
                 .fillMaxWidth()
                 .align(TopCenter)
         ) {
-            HeaderScreen{
+            HeaderScreen {
                 onBackClick.invoke()
             }
 
@@ -960,11 +1150,12 @@ fun TestScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .height(1.dp)
-                .background(Color(0xffdddddd))
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .height(1.dp)
+                    .background(Color(0xffdddddd))
             )
         }
 
@@ -994,19 +1185,20 @@ fun TestScreen(
 
 @Composable
 fun HeaderScreen(
-    backBtnOnClick : () -> Unit
-){
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .height(57.dp)
-        .background(Color.White)
+    backBtnOnClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(57.dp)
+            .background(Color.White)
     ) {
         IconButton(
             onClick = {
                 backBtnOnClick()
             },
             modifier = Modifier.size(54.dp)
-        ){
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.back_arrow_svg),
                 contentDescription = "back"
@@ -1031,7 +1223,7 @@ class EditableOffset(private val initialOffset: Animatable<Float, AnimationVecto
 
 fun Offset.toIntOffset() = IntOffset(x.roundToInt(), y.roundToInt())
 
-fun vibrator(context : Context){
+fun vibrator(context: Context) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         (context.getSystemService(ComponentActivity.VIBRATOR_MANAGER_SERVICE) as VibratorManager).run {
             defaultVibrator.vibrate(
@@ -1044,13 +1236,15 @@ fun vibrator(context : Context){
         vibrator.vibrate(10)
     }
 }
+
 var currentScreenWidth = 0f
+
 @Composable
 fun SlideScreen(
     modifier: Modifier = Modifier,
-    initValue : Int,
-    onDismiss : () -> Unit
-){
+    initValue: Int,
+    onDismiss: () -> Unit
+) {
     val list = listOf(
         MainActivity.PetBodyType.EX_UNDERWEIGHT,
         MainActivity.PetBodyType.UNDERWEIGHT,
@@ -1059,7 +1253,7 @@ fun SlideScreen(
         MainActivity.PetBodyType.EX_OVERWEIGHT
     )
 
-    var selectValue by remember{ mutableStateOf(0f) }
+    var selectValue by remember { mutableStateOf(0f) }
 
 
     CustomBottomSheetDialog(
@@ -1085,7 +1279,7 @@ fun SlideScreen(
         ) {
             Box(
                 modifier = Modifier.fillMaxSize()
-            ){
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -1133,9 +1327,9 @@ fun SlideScreen(
                             )
                             .verticalScroll(rememberScrollState())
                     ) {
-                        repeat(list.size){
-                            val alpha = abs(selectValue - (it+1).toFloat()).let { value ->
-                                val distance = if(value > 1f) 1f else value
+                        repeat(list.size) {
+                            val alpha = abs(selectValue - (it + 1).toFloat()).let { value ->
+                                val distance = if (value > 1f) 1f else value
                                 1f - distance
                             }
                             Column(
@@ -1180,15 +1374,15 @@ fun SlideScreen(
                 ) {
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    PingSlider(
-                        initValue = initValue,
-                        onChangeValue = {
-                            selectValue = it
-                        },
-                        onChangeIndex = {
-                            //selectIndex = it
-                        }
-                    )
+//                    PingSlider(
+//                        initValue = initValue,
+//                        onChangeValue = {
+//                            selectValue = it
+//                        },
+//                        onChangeIndex = {
+//                            //selectIndex = it
+//                        }
+//                    )
 
                     Spacer(modifier = Modifier.height(30.dp))
 
@@ -1221,186 +1415,13 @@ fun SlideScreen(
     }
 }
 
-@Composable
-fun PingSlider(
-    initValue: Int,
-    count: Int = 5,
-    activeColor : Color = Color(0xffff4857),
-    backgroundColor: Color = Color(0xffdddddd),
-    activeTextColor : String = "#FFff4857",
-    basicTextColor : String = "#FF777777",
-    textSize : Int = 13,
-    onChangeValue : (Float) -> Unit,
-    onChangeIndex : (Int) -> Unit
-){
-
-    val context = LocalContext.current
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context)
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-
-    val startOffset = 10.dpToPixels(context)
-    val endOffset = screenWidth - 62.dpToPixels(context)
-
-    val slideTextPaintBasic = baseTextPaint(
-        textSize,
-        android.graphics.Color.parseColor(basicTextColor),
-        Paint.Align.CENTER,
-        density,
-        context,
-        Typeface.NORMAL
-    )
-
-    val slideTextPaintSelect = baseTextPaint(
-        textSize,
-        android.graphics.Color.parseColor(activeTextColor),
-        Paint.Align.CENTER,
-        density,
-        context,
-        Typeface.NORMAL
-    )
-
-    fun calculateNewOffset(offsetX : Float) : Float{
-        val cnt = (count-1)*2
-        val interval = (screenWidth - 72.dpToPixels(context))/cnt
-
-        for(i in 0 until cnt){
-            val start = (interval * i) + 10.dpToPixels(context)
-            val end = (interval * (i+1)) + 10.dpToPixels(context)
-
-            if(offsetX in start .. end){
-                return if(i%2 == 0) start else end
-            }
-            if(i == cnt - 1 && offsetX > end) return end
-        }
-
-        return 0f
-    }
-
-    fun getOffset(index : Int) : Float{
-        val interval = (screenWidth - 72.dpToPixels(context))/(count - 1)
-
-        return calculateNewOffset((interval * (index.let { if(it == 0) 1 else it } - 1)) + 10.dpToPixels(context))
-    }
-
-    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
-        EditableOffset(
-            Animatable(getOffset(initValue)).apply {
-                updateBounds(startOffset,endOffset)
-            }
-        )
-    }
-
-    var selectIndex by remember{ mutableStateOf(0f) }
-    var selectIndexInt by remember { mutableStateOf(0) }
-
-    LaunchedEffect(key1 = offsetX.offset.value, block = {
-        offsetX.offset.value.let {
-            val interval = (endOffset - startOffset)/(count - 1)
-            selectIndex = ((it - startOffset)/interval) + 1f
-            onChangeValue.invoke(selectIndex)
-        }
-    })
-
-    LaunchedEffect(key1 = selectIndex){
-        selectIndexInt = round(selectIndex).toInt()
-    }
-
-    LaunchedEffect(key1 = selectIndexInt){
-        onChangeIndex.invoke(selectIndexInt)
-    }
-
-    LaunchedEffect(key1 = screenWidth){
-        if(currentScreenWidth !=0f && screenWidth != currentScreenWidth) {
-            val scale = screenWidth/ currentScreenWidth
-            offsetX.offset.updateBounds(startOffset,endOffset)
-            scope.launch {
-                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
-            }
-        }
-        currentScreenWidth = screenWidth
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .pointerInput(Unit) {
-                detectTapGestures {
-                    scope.launch {
-                        offsetX.offset.animateTo(
-                            calculateNewOffset(
-                                it.x - 26.dpToPixels(
-                                    context
-                                )
-                            )
-                        )
-                    }
-                }
-            }
-    ){
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(TopCenter)
-        ){
-
-            drawLine(
-                color = backgroundColor,
-                Offset(36.dp.toPx(), 26.dp.toPx()),
-                Offset(size.width - 36.dp.toPx(), 26.dp.toPx()),
-                strokeWidth = 8.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-
-            drawLine(
-                color = activeColor,
-                Offset(36.dp.toPx(), 26.dp.toPx()),
-                Offset(offsetX.offset.value + 26.dp.toPx(), 26.dp.toPx()),
-                strokeWidth = 8.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-
-            for(i in 0 until count){
-                drawContext.canvas.nativeCanvas.drawText(
-                    (i+1).toString(),
-                    (((size.width - 72.dp.toPx())/(count - 1))*i) + 36.dp.toPx(),
-                    72.dp.toPx(),
-                    if(i+1 == selectIndexInt) slideTextPaintSelect else slideTextPaintBasic
-                )
-            }
-        }
-
-        Image(
-            painter = painterResource(id = R.drawable.img_slider),
-            contentDescription = "",
-            modifier = Modifier
-                .size(52.dp)
-                .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDrag = { _, dragAmount ->
-                            scope.launch {
-                                offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
-                            }
-                        },
-                        onDragEnd = {
-                            scope.launch {
-                                offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
-                            }
-                        }
-                    )
-                }
-        )
-    }
-}
 
 @Composable
-fun Crop(){
+fun Crop() {
     val context = LocalContext.current
 
     val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
-    var screenWidth by remember{ mutableStateOf(deviceWidth) }
+    var screenWidth by remember { mutableStateOf(deviceWidth) }
     var screenHeight by remember { mutableStateOf(0f) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isVisibleBaseLine by remember { mutableStateOf(false) }
@@ -1419,7 +1440,7 @@ fun Crop(){
         }
     )
 
-    log("qweqwe",deviceWidth,screenWidth,screenHeight)
+    log("qweqwe", deviceWidth, screenWidth, screenHeight)
 
     val scope = rememberCoroutineScope()
 
@@ -1441,11 +1462,13 @@ fun Crop(){
 
             bitmap?.let {
 
-                AsyncImage(model = bitmap, contentDescription = "", modifier = Modifier
-                    .fillMaxWidth()
-                    .align(
-                        Center
-                    ), contentScale = ContentScale.FillWidth)
+                AsyncImage(
+                    model = bitmap, contentDescription = "", modifier = Modifier
+                        .fillMaxWidth()
+                        .align(
+                            Center
+                        ), contentScale = ContentScale.FillWidth
+                )
             }
 
         }
@@ -1454,8 +1477,8 @@ fun Crop(){
             val rotation = remember { Animatable(0f) }
             val zoomState = rememberZoomState()
 
-            LaunchedEffect(Unit){
-                zoomState.isDragging.collect{
+            LaunchedEffect(Unit) {
+                zoomState.isDragging.collect {
                     isVisibleBaseLine = it
                 }
             }
@@ -1480,9 +1503,10 @@ fun Crop(){
                         .padding(top = 24.dp),
                     shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                 ) {
-                    Box(modifier = Modifier
-                        .fillMaxSize()
-                    ){
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
 
                         BlurImage(
                             screenWidth = screenWidth,
@@ -1521,14 +1545,21 @@ fun Crop(){
                                             }
                                         }
 
-                                        log("qweqwe",size,it.painter.intrinsicSize,deviceWidth,screenWidth,screenWidth / size.width)
+                                        log(
+                                            "qweqwe",
+                                            size,
+                                            it.painter.intrinsicSize,
+                                            deviceWidth,
+                                            screenWidth,
+                                            screenWidth / size.width
+                                        )
                                         zoomState.setContentSize(size)
 
-                                        if(size.width <= size.height){
+                                        if (size.width <= size.height) {
                                             scope.launch {
                                                 zoomState.setScale(screenWidth / size.width)
                                             }
-                                        }else{
+                                        } else {
                                             scope.launch {
                                                 zoomState.setScale(screenWidth / size.height)
                                             }
@@ -1548,14 +1579,14 @@ fun Crop(){
                             .graphicsLayer {
                                 compositingStrategy = CompositingStrategy.Offscreen
                             }
-                        ){
+                        ) {
                             drawRect(
                                 color = Color.Black.copy(alpha = 0.8f),
                             )
                             drawCircle(
                                 color = Color.Transparent,
-                                radius = (screenWidth/2),
-                                center = Offset(deviceWidth/2,screenHeight/2),
+                                radius = (screenWidth / 2),
+                                center = Offset(deviceWidth / 2, screenHeight / 2),
                                 blendMode = BlendMode.Clear,
                             )
                         }
@@ -1565,33 +1596,52 @@ fun Crop(){
                             enter = fadeIn(),
                             exit = fadeOut()
                         ) {
-                            Canvas(modifier = Modifier
-                                .fillMaxSize()
-                            ){
-                                val top = (screenHeight/2) - (screenWidth/2)
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                            ) {
+                                val top = (screenHeight / 2) - (screenWidth / 2)
 
-                                val interval = screenWidth/3
+                                val interval = screenWidth / 3
 
-                                val yValueWidth = (screenHeight/2) - (top + interval)
-                                val xValueWidth = sqrt((screenWidth/2).pow(2) - yValueWidth.pow(2))
+                                val yValueWidth = (screenHeight / 2) - (top + interval)
+                                val xValueWidth =
+                                    sqrt((screenWidth / 2).pow(2) - yValueWidth.pow(2))
 
-                                val xValueHeight = (screenWidth/2) - (interval)
-                                val yValueHeight = sqrt((screenWidth/2).pow(2) - xValueHeight.pow(2))
+                                val xValueHeight = (screenWidth / 2) - (interval)
+                                val yValueHeight =
+                                    sqrt((screenWidth / 2).pow(2) - xValueHeight.pow(2))
 
-                                for(i in 0..1){
+                                for (i in 0..1) {
                                     drawLine(
                                         color = Color.White.copy(alpha = 0.5f),
-                                        start = Offset((deviceWidth/2) - xValueWidth,top + (interval * (i+1))),
-                                        end = Offset((deviceWidth/2) + xValueWidth,top + (interval * (i+1))),
+                                        start = Offset(
+                                            (deviceWidth / 2) - xValueWidth,
+                                            top + (interval * (i + 1))
+                                        ),
+                                        end = Offset(
+                                            (deviceWidth / 2) + xValueWidth,
+                                            top + (interval * (i + 1))
+                                        ),
                                         strokeWidth = 1.dp.toPx()
                                     )
                                 }
 
-                                for(i in 0..1){
+                                for (i in 0..1) {
                                     drawLine(
                                         color = Color.White.copy(alpha = 0.5f),
-                                        start = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) - yValueHeight),
-                                        end = Offset((if(deviceWidth != screenWidth) 140.dpToPixels(context) else 0f) + (interval * (i+1)),(screenHeight/2) + yValueHeight),
+                                        start = Offset(
+                                            (if (deviceWidth != screenWidth) 140.dpToPixels(
+                                                context
+                                            ) else 0f) + (interval * (i + 1)),
+                                            (screenHeight / 2) - yValueHeight
+                                        ),
+                                        end = Offset(
+                                            (if (deviceWidth != screenWidth) 140.dpToPixels(
+                                                context
+                                            ) else 0f) + (interval * (i + 1)),
+                                            (screenHeight / 2) + yValueHeight
+                                        ),
                                         strokeWidth = 1.dp.toPx()
                                     )
                                 }
@@ -1743,7 +1793,7 @@ fun Crop(){
     }
 }
 
-suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate : Float): Bitmap? {
+suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate: Float): Bitmap? {
     return withContext(Dispatchers.IO) {
         try {
             val contentResolver = context.contentResolver
@@ -1754,7 +1804,7 @@ suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate : Float)
                 options.inPreferredConfig = Bitmap.Config.ARGB_8888
                 val originalBitmap = BitmapFactory.decodeStream(inputStream, null, options)
 
-                val orientation = getOrientationFromExif(context,imageUri)
+                val orientation = getOrientationFromExif(context, imageUri)
 
                 originalBitmap?.let {
                     val rotateBitmap = rotateBitmap(
@@ -1767,7 +1817,7 @@ suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate : Float)
 
                     rotateBitmap
                 }
-            }?:run{
+            } ?: run {
                 null
             }
 
@@ -1778,7 +1828,7 @@ suspend fun createBitmapFromUri(context: Context, imageUri: Uri, rotate : Float)
     }
 }
 
-fun createBitmapFromUri(context: Context, imageUri: Uri) : Bitmap?{
+fun createBitmapFromUri(context: Context, imageUri: Uri): Bitmap? {
     return try {
         val contentResolver = context.contentResolver
         val inputStream = contentResolver.openInputStream(imageUri)
@@ -1788,7 +1838,7 @@ fun createBitmapFromUri(context: Context, imageUri: Uri) : Bitmap?{
             options.inPreferredConfig = Bitmap.Config.ARGB_8888
             val originalBitmap = BitmapFactory.decodeStream(inputStream, null, options)
 
-            val orientation = getOrientationFromExif(context,imageUri)
+            val orientation = getOrientationFromExif(context, imageUri)
 
             originalBitmap?.let {
                 val rotateBitmap = rotateBitmap(
@@ -1800,7 +1850,7 @@ fun createBitmapFromUri(context: Context, imageUri: Uri) : Bitmap?{
 
                 rotateBitmap
             }
-        }?:run{
+        } ?: run {
             null
         }
 
@@ -1811,14 +1861,17 @@ fun createBitmapFromUri(context: Context, imageUri: Uri) : Bitmap?{
 }
 
 
-private fun getOrientationFromExif(context: Context,imageUri: Uri): Int {
+private fun getOrientationFromExif(context: Context, imageUri: Uri): Int {
     var inputStream: InputStream? = null
     try {
         inputStream = context.contentResolver.openInputStream(imageUri)
 
         if (inputStream != null) {
             val exifInterface = ExifInterface(inputStream)
-            return exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED)
+            return exifInterface.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED
+            )
         }
     } catch (e: IOException) {
         e.printStackTrace()
@@ -1847,8 +1900,8 @@ private fun rotateBitmap(bitmap: Bitmap, orientation: Int, rotate: Float = 0f): 
 
 @Composable
 fun BlurImage(
-    screenWidth : Float,
-    screenHeight : Float,
+    screenWidth: Float,
+    screenHeight: Float,
     content: @Composable () -> Unit
 ) {
     Box {
@@ -1879,7 +1932,6 @@ fun BlurImage(
         }
     }
 }
-
 
 
 @OptIn(ExperimentalFoundationApi::class)
