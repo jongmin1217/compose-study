@@ -388,57 +388,88 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
+                val screenWidth = LocalConfiguration.current.screenWidthDp
 
-                PingSlider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        //.padding(horizontal = 30.dp)
-                        .height(100.dp),
-                    initValue = 0,
-                    barHeight = 15.dp,
-                    markerSize = Size(12f,12f),
-                    markerPainter = painterResource(id = R.drawable.img_slider),
-                    onChangeValue = {  },
-                    onChangeIndex = {  }
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+
+                    PingSlider(
+                        markerContent = {
+                            Spacer(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .background(Color.Red)
+
+                            )
+                        },
+                        onChangeIndex = {},
+                        onChangeValue = {}
+                    )
+
+                }
+
             }
         }
     }
 }
 
-const val BASE_PADDING = 5
-const val LINE_BASE_PADDING = 36
+
+@Composable
+fun MarkerComponent(
+    imagePainterId: Int,
+    width : Int,
+    height : Int
+){
+    Image(
+        painter = painterResource(id = imagePainterId),
+        contentDescription = "",
+        modifier = Modifier
+            .width(width.dp)
+            .height(height = height.dp),
+        contentScale = ContentScale.FillBounds
+    )
+}
 
 @Composable
 fun PingSlider(
-    modifier: Modifier,
-    initValue: Int,
-    xLabel: List<String> = listOf("1", "2", "3", "4", "5"),
-    activeColor: Color = Color(0xffff4857),
-    backgroundColor: Color = Color(0xffdddddd),
-    activeTextColor: Color = Color.Black,
-    basicTextColor: Color = Color.Blue,
-    textSize: Int = 13,
+    modifier: Modifier = Modifier,
+    initValue: Int = 0,
+    xLabels: List<String> = listOf("1", "2", "3", "4", "5"),
+    trackColorActive: Color = Color.Red,
+    trackColor: Color = Color.LightGray,
+    textColorActive: Color = Color.Red,
+    textColor: Color = Color.Black,
+    textSize: Dp = 13.dp,
     barHeight: Dp = 8.dp,
-    markerPainter: Painter,
-    markerSize: Size = Size(52f,52f),
+    markerContent: @Composable () -> Unit,
     textTypefacePath: String? = null,
+    isVibrate: Boolean = true,
     onChangeValue: (Float) -> Unit,
     onChangeIndex: (Int) -> Unit
 ) {
 
-    val basePadding = (markerSize.width.toInt() / 2)
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
-
-    var screenWidth by remember{ mutableStateOf(configuration.screenWidthDp.dpToPixels(context)) }
-    var screenHeight by remember{ mutableStateOf(0f) }
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    var endOffset by remember{ mutableStateOf(screenWidth - markerSize.width.toInt().dpToPixels(context))}
-    val halfWidth = (markerSize.width.toInt() / 2)
-    val halfHeight = (markerSize.height.toInt() / 2)
+    val scope = rememberCoroutineScope()
+
+    var markerSize by remember { mutableStateOf(Size(0f,0f)) }
+    var screenWidth by remember { mutableStateOf(configuration.screenWidthDp.dpToPixel(context)) }
+    var endOffset by remember {
+        mutableStateOf(
+            screenWidth - markerSize.width.toInt().dpToPixel(context)
+        )
+    }
+    var currentValue by rememberSaveable { mutableStateOf(initValue.toFloat()) }
+    var currentIndex by rememberSaveable { mutableStateOf(initValue) }
+    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
+        EditableOffset(Animatable(endOffset / (xLabels.size - 1) * currentIndex))
+    }
+
+    var halfWidth by remember { mutableStateOf(0) }
+    var halfHeight by remember { mutableStateOf(0) }
 
 
     @Composable
@@ -446,7 +477,7 @@ fun PingSlider(
         Paint().apply {
             color = textColor
             textAlign = Paint.Align.CENTER
-            this.textSize = density.run { textSize.dp.toPx() }
+            this.textSize = density.run { textSize.toPx() }
             isAntiAlias = true
             textTypefacePath?.let {
                 Typeface.createFromAsset(context.resources.assets, it).run {
@@ -456,11 +487,11 @@ fun PingSlider(
         }
     }
 
-    val slideTextPaintBasic = textPaint(basicTextColor.toArgb())
-    val slideTextPaintSelect = textPaint(activeTextColor.toArgb())
+    val slideTextPaintBasic = textPaint(textColor.toArgb())
+    val slideTextPaintSelect = textPaint(textColorActive.toArgb())
 
     fun calculateNewOffset(offsetX: Float): Float {
-        val cnt = (xLabel.size - 1) * 2
+        val cnt = (xLabels.size - 1) * 2
         val interval = endOffset / cnt
         for (i in 0 until cnt) {
             val start = (interval * i)
@@ -475,126 +506,117 @@ fun PingSlider(
         return 0f
     }
 
-    fun getOffset(index: Int): Float {
-        val interval = endOffset / (xLabel.size - 1)
-
-        return calculateNewOffset((interval * (index.let { if (it == 0) 1 else it } - 1)) + 10.dpToPixels(
-            context
-        ))
+    LaunchedEffect(markerSize) {
+        halfWidth = (markerSize.width.toInt() / 2)
+        halfHeight = (markerSize.height.toInt() / 2)
     }
 
-    val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
-        EditableOffset(
-            Animatable(getOffset(initValue)).apply {
-                updateBounds(0f, endOffset)
-            }
-        )
+    LaunchedEffect(currentValue) {
+        currentIndex = round(currentValue).toInt()
     }
 
-    var selectIndex by remember { mutableStateOf(0f) }
-    var selectIndexInt by remember { mutableStateOf(0) }
-
-    LaunchedEffect(key1 = offsetX.offset.value, block = {
-        offsetX.offset.value.let {
-            val interval = endOffset / (xLabel.size - 1)
-            selectIndex = (it / interval) + 1f
-            onChangeValue.invoke(selectIndex)
-        }
-    })
-
-    LaunchedEffect(key1 = selectIndex) {
-        selectIndexInt = round(selectIndex).toInt()
+    LaunchedEffect(currentIndex) {
+        if (isVibrate) vibrator(context)
+        onChangeIndex.invoke(currentIndex)
     }
 
-    LaunchedEffect(key1 = selectIndexInt) {
-        onChangeIndex.invoke(selectIndexInt)
+    LaunchedEffect(
+        screenWidth,
+        endOffset
+    ) {
+        offsetX.offset.snapTo(endOffset / (xLabels.size - 1) * currentIndex)
     }
 
-    LaunchedEffect(key1 = screenWidth) {
-        if (currentScreenWidth != 0f && screenWidth != currentScreenWidth) {
-            val scale = screenWidth / currentScreenWidth
-            offsetX.offset.updateBounds(0f, endOffset)
-            scope.launch {
-                offsetX.offset.snapTo(calculateNewOffset(offsetX.offset.value * scale))
-            }
-        }
-        currentScreenWidth = screenWidth
+    LaunchedEffect(offsetX.offset.value) {
+        val interval = endOffset / (xLabels.size - 1)
+        currentValue = (offsetX.offset.value / interval)
+        onChangeValue.invoke(currentValue)
     }
 
     Box(
         modifier = modifier.then(
             Modifier
+                .height((markerSize.height + textSize.value + 10).dp)
                 .pointerInput(Unit) {
                     detectTapGestures {
-
                         scope.launch {
-                            offsetX.offset.animateTo(calculateNewOffset(it.x - halfWidth.dpToPixels(context)))
+                            offsetX.offset.animateTo(
+                                calculateNewOffset(it.x - halfWidth.dpToPixel(context))
+                            )
                         }
                     }
                 }
                 .onGloballyPositioned {
                     screenWidth = it.size.width.toFloat()
-                    screenHeight = it.size.height.toFloat()
-                    endOffset = it.size.width.toFloat() - markerSize.width.toInt().dpToPixels(context)
-                    offsetX.offset.updateBounds(0f,endOffset)
+                    endOffset = it.size.width.toFloat() - markerSize.width
+                        .toInt()
+                        .dpToPixel(context)
+                    offsetX.offset.updateBounds(0f, endOffset)
                 }
         )
     ) {
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = basePadding.dp)
+                .padding(horizontal = halfWidth.dp)
                 .align(TopCenter)
         ) {
 
             drawLine(
-                color = backgroundColor,
-                Offset(0f, halfHeight.dp.toPx()),
-                Offset(size.width, halfHeight.dp.toPx()),
+                color = trackColor,
+                start = Offset(0f, halfHeight.dp.toPx()),
+                end = Offset(size.width, halfHeight.dp.toPx()),
                 strokeWidth = barHeight.toPx(),
                 cap = StrokeCap.Round
             )
 
             drawLine(
-                color = activeColor,
-                Offset(0f, halfHeight.dp.toPx()),
-                Offset(offsetX.offset.value, halfHeight.dp.toPx()),
+                color = trackColorActive,
+                start = Offset(0f, halfHeight.dp.toPx()),
+                end = Offset(offsetX.offset.value, halfHeight.dp.toPx()),
                 strokeWidth = barHeight.toPx(),
                 cap = StrokeCap.Round
             )
 
-            for (i in xLabel.indices) {
+            for (i in xLabels.indices) {
                 drawContext.canvas.nativeCanvas.drawText(
-                    xLabel[i],
-                    ((size.width / (xLabel.size - 1)) * i),
-                    screenHeight,
-                    if (i + 1 == selectIndexInt) slideTextPaintSelect else slideTextPaintBasic
+                    xLabels[i],
+                    ((size.width / (xLabels.size - 1)) * i),
+                    (markerSize.height + textSize.value).toInt().dpToPixel(context),
+                    if (i == currentIndex) slideTextPaintSelect else slideTextPaintBasic
                 )
             }
         }
 
-        Image(
-            painter = markerPainter,
-            contentDescription = "",
-            modifier = Modifier
-                .size(markerSize.width.dp,markerSize.height.dp)
-                .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDrag = { _, dragAmount ->
-                            scope.launch {
-                                offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
-                            }
-                        },
-                        onDragEnd = {
-                            scope.launch {
-                                offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
-                            }
+        Box(modifier = Modifier
+            .offset { IntOffset(offsetX.offset.value.toInt(), 0) }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDrag = { _, dragAmount ->
+                        scope.launch {
+                            offsetX.offset.snapTo(offsetX.offset.value + dragAmount.x)
                         }
-                    )
-                },
-            contentScale = ContentScale.FillBounds
-        )
+                    },
+                    onDragEnd = {
+                        scope.launch {
+                            offsetX.offset.animateTo(calculateNewOffset(offsetX.offset.value))
+                        }
+                    }
+                )
+            }
+            .onGloballyPositioned {
+                markerSize = Size(
+                    it.size.width
+                        .toFloat()
+                        .pixelToDp(context),
+                    it.size.height
+                        .toFloat()
+                        .pixelToDp(context)
+                )
+            }
+        ) {
+            markerContent()
+        }
     }
 }
 
@@ -1420,7 +1442,7 @@ fun SlideScreen(
 fun Crop() {
     val context = LocalContext.current
 
-    val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixels(context).toInt().toFloat()
+    val deviceWidth = LocalConfiguration.current.screenWidthDp.dpToPixel(context).toInt().toFloat()
     var screenWidth by remember { mutableStateOf(deviceWidth) }
     var screenHeight by remember { mutableStateOf(0f) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -1518,11 +1540,11 @@ fun Crop() {
                                     .background(Color(0xff000000))
                                     .onGloballyPositioned {
                                         screenHeight = it.size.height.toFloat()
-                                        if (screenHeight - 111.dpToPixels(context) < deviceWidth) {
+                                        if (screenHeight - 111.dpToPixel(context) < deviceWidth) {
                                             screenWidth =
-                                                deviceWidth - 280.dpToPixels(context)
+                                                deviceWidth - 280.dpToPixel(context)
                                             zoomState.setShortHeightDevice(
-                                                280.dpToPixels(
+                                                280.dpToPixel(
                                                     context
                                                 )
                                             )
@@ -1631,13 +1653,13 @@ fun Crop() {
                                     drawLine(
                                         color = Color.White.copy(alpha = 0.5f),
                                         start = Offset(
-                                            (if (deviceWidth != screenWidth) 140.dpToPixels(
+                                            (if (deviceWidth != screenWidth) 140.dpToPixel(
                                                 context
                                             ) else 0f) + (interval * (i + 1)),
                                             (screenHeight / 2) - yValueHeight
                                         ),
                                         end = Offset(
-                                            (if (deviceWidth != screenWidth) 140.dpToPixels(
+                                            (if (deviceWidth != screenWidth) 140.dpToPixel(
                                                 context
                                             ) else 0f) + (interval * (i + 1)),
                                             (screenHeight / 2) + yValueHeight
@@ -2076,7 +2098,7 @@ fun GaugeMiddle(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val width = configuration.screenWidthDp.dpToPixels(context)
+    val width = configuration.screenWidthDp.dpToPixel(context)
 
     if (currentGaugeValue != 0f) {
         Box(
@@ -2085,7 +2107,7 @@ fun GaugeMiddle(
                 .padding(top = 9.5.dp)
         ) {
             GaugeSpeechBubble(
-                ((width - 80.dpToPixels(context)) * if (percent > 0.98f) 0.98f else percent) + 20.dpToPixels(
+                ((width - 80.dpToPixel(context)) * if (percent > 0.98f) 0.98f else percent) + 20.dpToPixel(
                     context
                 ),
                 this,
@@ -2942,7 +2964,7 @@ fun Graph(
     val context = LocalContext.current
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
-    val width = configuration.screenWidthDp.dpToPixels(context)
+    val width = configuration.screenWidthDp.dpToPixel(context)
 
     val isEmptyList = points.find { it.y != null } == null
 
@@ -3287,7 +3309,7 @@ fun SpeechBubble(
             }
         ) {
             layoutWidthOffset = it.width / 2
-            layoutHeightOffset = it.height + 11.dpToPixels(context)
+            layoutHeightOffset = it.height + 11.dpToPixel(context)
         }
 
         if (isVisibleXClickLabel) {
@@ -3411,9 +3433,11 @@ val Dp.textSp: TextUnit
         this@textSp.toSp()
     }
 
-fun Int.dpToPixels(context: Context): Float = TypedValue.applyDimension(
+fun Int.dpToPixel(context: Context): Float = TypedValue.applyDimension(
     TypedValue.COMPLEX_UNIT_DIP, this.toFloat(), context.resources.displayMetrics
 )
+
+fun Float.pixelToDp(context: Context) = this / (context.resources.displayMetrics.densityDpi / 160f)
 
 
 fun DrawScope.drawNormalPath(path: Path, lineColor: Color) {
