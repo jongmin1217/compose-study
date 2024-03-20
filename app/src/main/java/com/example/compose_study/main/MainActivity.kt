@@ -158,6 +158,7 @@ import soup.compose.photo.PhotoBox
 import soup.compose.photo.rememberPhotoState
 import java.io.IOException
 import java.io.InputStream
+import java.lang.IndexOutOfBoundsException
 import java.net.URI
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -389,22 +390,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 val screenWidth = LocalConfiguration.current.screenWidthDp
-
+                var value by rememberSaveable{ mutableStateOf(3f) }
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
 
-                    PingSlider(
-                        markerContent = {
-                            Spacer(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .background(Color.Red)
+//                    PingSlider(
+//                        showText = false
+//                    )
 
-                            )
+                    PingSlider(
+                        value = value,
+                        onValueChange = {
+                            value = it
                         },
-                        onChangeIndex = {},
-                        onChangeValue = {}
+                        onStepChange = {
+
+                        }
                     )
 
                 }
@@ -418,9 +420,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MarkerComponent(
     imagePainterId: Int,
-    width : Int,
-    height : Int
-){
+    width: Int,
+    height: Int
+) {
     Image(
         painter = painterResource(id = imagePainterId),
         contentDescription = "",
@@ -432,22 +434,38 @@ fun MarkerComponent(
 }
 
 @Composable
+fun DefaultMarker(){
+    Canvas(modifier = Modifier.size(30.dp), onDraw = {
+        val size = 30.dp.toPx()
+        drawCircle(
+            color = Color.Red,
+            radius = size / 2f
+        )
+    })
+}
+
+@Composable
 fun PingSlider(
     modifier: Modifier = Modifier,
-    initValue: Int = 0,
-    xLabels: List<String> = listOf("1", "2", "3", "4", "5"),
+    value: Float = 0f,
+    stepSize : Int = 5,
+    xLabels: List<String> = (0 until stepSize).map { it.toString() },
     trackColorActive: Color = Color.Red,
     trackColor: Color = Color.LightGray,
     textColorActive: Color = Color.Red,
     textColor: Color = Color.Black,
+    pointerColor: Color = Color.White,
     textSize: Dp = 13.dp,
     barHeight: Dp = 8.dp,
-    markerContent: @Composable () -> Unit,
+    markerContent: (@Composable () -> Unit) = { DefaultMarker() },
     textTypefacePath: String? = null,
     isVibrate: Boolean = true,
-    onChangeValue: (Float) -> Unit,
-    onChangeIndex: (Int) -> Unit
+    showPointer: Boolean = true,
+    showText: Boolean = true,
+    onValueChange: (Float) -> Unit,
+    onStepChange: ((Int) -> Unit)? = null
 ) {
+
 
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
@@ -455,17 +473,17 @@ fun PingSlider(
 
     val scope = rememberCoroutineScope()
 
-    var markerSize by remember { mutableStateOf(Size(0f,0f)) }
+    var markerSize by remember { mutableStateOf(Size(0f, 0f)) }
     var screenWidth by remember { mutableStateOf(configuration.screenWidthDp.dpToPixel(context)) }
     var endOffset by remember {
         mutableStateOf(
             screenWidth - markerSize.width.toInt().dpToPixel(context)
         )
     }
-    var currentValue by rememberSaveable { mutableStateOf(initValue.toFloat()) }
-    var currentIndex by rememberSaveable { mutableStateOf(initValue) }
+
+    var currentStep by rememberSaveable { mutableStateOf(0) }
     val offsetX = rememberSaveable(saver = EditableOffset.Saver) {
-        EditableOffset(Animatable(endOffset / (xLabels.size - 1) * currentIndex))
+        EditableOffset(Animatable(endOffset / (stepSize - 1) * currentStep))
     }
 
     var halfWidth by remember { mutableStateOf(0) }
@@ -491,7 +509,7 @@ fun PingSlider(
     val slideTextPaintSelect = textPaint(textColorActive.toArgb())
 
     fun calculateNewOffset(offsetX: Float): Float {
-        val cnt = (xLabels.size - 1) * 2
+        val cnt = (stepSize - 1) * 2
         val interval = endOffset / cnt
         for (i in 0 until cnt) {
             val start = (interval * i)
@@ -511,32 +529,30 @@ fun PingSlider(
         halfHeight = (markerSize.height.toInt() / 2)
     }
 
-    LaunchedEffect(currentValue) {
-        currentIndex = round(currentValue).toInt()
-    }
-
-    LaunchedEffect(currentIndex) {
-        if (isVibrate) vibrator(context)
-        onChangeIndex.invoke(currentIndex)
-    }
 
     LaunchedEffect(
         screenWidth,
         endOffset
     ) {
-        offsetX.offset.snapTo(endOffset / (xLabels.size - 1) * currentIndex)
+        offsetX.offset.snapTo(endOffset / (stepSize - 1) * currentStep)
     }
 
     LaunchedEffect(offsetX.offset.value) {
-        val interval = endOffset / (xLabels.size - 1)
-        currentValue = (offsetX.offset.value / interval)
-        onChangeValue.invoke(currentValue)
+        val interval = endOffset / (stepSize - 1)
+        onValueChange.invoke(offsetX.offset.value / interval)
+        log("qweqwe",currentStep,round(value).toInt())
+        if(currentStep != round(value).toInt()){
+            currentStep = round(value).toInt()
+            if (isVibrate) vibrator(context)
+            onStepChange?.invoke(currentStep)
+        }
+
     }
 
     Box(
         modifier = modifier.then(
             Modifier
-                .height((markerSize.height + textSize.value + 10).dp)
+                .height((markerSize.height + (if (showText) textSize.value else 0f) + 3).dp)
                 .pointerInput(Unit) {
                     detectTapGestures {
                         scope.launch {
@@ -578,13 +594,39 @@ fun PingSlider(
                 cap = StrokeCap.Round
             )
 
-            for (i in xLabels.indices) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    xLabels[i],
-                    ((size.width / (xLabels.size - 1)) * i),
-                    (markerSize.height + textSize.value).toInt().dpToPixel(context),
-                    if (i == currentIndex) slideTextPaintSelect else slideTextPaintBasic
-                )
+            if (showPointer || showText) {
+                for (i in 0 until stepSize) {
+                    if (showText) {
+                        try {
+                            xLabels[i]
+                        }catch (e : IndexOutOfBoundsException){
+                            String()
+                        }.run {
+                            drawContext.canvas.nativeCanvas.drawText(
+                                this,
+                                ((size.width / (stepSize - 1)) * i),
+                                (markerSize.height + textSize.value).toInt().dpToPixel(context),
+                                if (i == currentStep) slideTextPaintSelect else slideTextPaintBasic
+                            )
+                        }
+                    }
+
+                    if (showPointer) {
+                        drawLine(
+                            color = pointerColor,
+                            start = Offset(
+                                ((size.width / (stepSize - 1)) * i),
+                                halfHeight.dp.toPx()
+                            ),
+                            end = Offset(
+                                ((size.width / (stepSize - 1)) * i),
+                                halfHeight.dp.toPx()
+                            ),
+                            strokeWidth = (barHeight - 1.dp).toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
             }
         }
 
