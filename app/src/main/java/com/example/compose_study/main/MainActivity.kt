@@ -208,7 +208,6 @@ class MainActivity : ComponentActivity() {
         GraphPoint(10, "09-11", 250),
         GraphPoint(11, "09-12", 370),
         GraphPoint(12, "09-13", 230),
-
         GraphPoint(13, "09-14", 113),
         GraphPoint(14, "09-15", 500),
         GraphPoint(15, "09-16", 130),
