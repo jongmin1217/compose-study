@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -31,12 +32,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -69,6 +74,9 @@ import androidx.compose.material.*
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.ripple.LocalRippleTheme
+import androidx.compose.material.ripple.RippleAlpha
+import androidx.compose.material.ripple.RippleTheme
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -83,6 +91,7 @@ import androidx.compose.ui.Alignment.Companion.CenterEnd
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.Alignment.Companion.End
 import androidx.compose.ui.Alignment.Companion.Start
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopCenter
@@ -134,6 +143,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import androidx.core.graphics.scale
 import coil.compose.AsyncImage
@@ -380,7 +390,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private object NoRippleTheme : RippleTheme {
+        @Composable
+        override fun defaultColor() = Color.Unspecified
+
+        @Composable
+        override fun rippleAlpha(): RippleAlpha = RippleAlpha(0.0f,0.0f,0.0f,0.0f)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
+
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -389,30 +408,408 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                val screenWidth = LocalConfiguration.current.screenWidthDp
-                var value by rememberSaveable{ mutableStateOf(3f) }
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                CompositionLocalProvider(LocalRippleTheme provides NoRippleTheme) {
 
-//                    PingSlider(
-//                        showText = false
-//                    )
+                    val configuration = LocalConfiguration.current
+                    val context = LocalContext.current
 
-                    PingSlider(
-                        value = value,
-                        onValueChange = {
-                            value = it
-                        },
-                        onStepChange = {
+                    val screenWidth = configuration.screenWidthDp.dpToPixel(context)
+                    val screenHeight = configuration.screenHeightDp.dpToPixel(context)
 
-                        }
-                    )
+                    var state by remember {
+                        mutableStateOf(0)
+                    }
 
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(color = Color.White)
+                    ) {
+
+                        CircleGauge(
+                            modifier = Modifier
+                                .align(Center)
+                        )
+
+
+                        BtnTest(
+                            modifier = Modifier
+                                .align(BottomEnd)
+                                .padding(end = 15.dp, bottom = 20.dp)
+                        )
+
+                    }
                 }
+//                val screenWidth = LocalConfiguration.current.screenWidthDp
+//                var value by rememberSaveable{ mutableStateOf(3f) }
+//                Column(
+//                    modifier = Modifier.fillMaxSize()
+//                ) {
+//
+////                    PingSlider(
+////                        showText = false
+////                    )
+//
+//                    PingSlider(
+//                        value = value,
+//                        onValueChange = {
+//                            value = it
+//                        },
+//                        onStepChange = {
+//
+//                        }
+//                    )
+//
+//                }
+
+
 
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun CircleGauge(
+    modifier: Modifier = Modifier,
+    goalValue : Float = 15.3f,
+    startValue : Float = 19.7f,
+    currentValue : Float = 18.6f
+){
+
+    val context = LocalContext.current
+
+    var gaugeValue by remember { mutableStateOf(0f) }
+    val gaugeAnimate by animateFloatAsState(
+        targetValue = gaugeValue,
+        animationSpec = spring(dampingRatio = 3f),
+        label = "gaugeValue"
+    )
+
+    var goalTextValue by remember { mutableStateOf(0f) }
+    val goalTextAnimate by animateFloatAsState(
+        targetValue = goalTextValue,
+        animationSpec = spring(dampingRatio = 3f),
+        label = "goalTextValue"
+    )
+
+    LaunchedEffect(currentValue) {
+        delay(500)
+        gaugeValue = (abs(currentValue - startValue) / abs(goalValue - startValue))
+        goalTextValue = abs(goalValue - currentValue)
+    }
+
+    Box(
+        modifier = modifier
+    ) {
+        Canvas(
+            modifier = Modifier
+                .align(Center)
+                .width(200.dp)
+                .height(200.dp)
+        ) {
+            drawArc(
+                brush = SolidColor(Color(0xffEBEFF4)),
+                startAngle = 140f,
+                sweepAngle = 260f,
+                useCenter = false,
+                style = Stroke(20.dpToPixel(context), cap = StrokeCap.Round)
+            )
+
+
+
+            drawContext.canvas.nativeCanvas.apply {
+                drawArc(
+                    RectF(0f,0f,size.width,size.height),
+                    140f,
+                    gaugeAnimate * 260,
+                    false,
+                    Paint().apply {
+                        strokeWidth = 20.dpToPixel(context)
+                        color = android.graphics.Color.parseColor("#FF838F9E")
+                        style = Paint.Style.STROKE
+                        strokeCap = Paint.Cap.ROUND
+//                        setShadowLayer(
+//                            60f,
+//                            0f,
+//                            0f,
+//                            android.graphics.Color.argb(100, 72, 170, 217)
+//                        )
+                    }
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Center)
+        ) {
+            AppText(
+                text = "목표 체중까지",
+                style = TextStyle(
+                    fontWeight = FontWeight.W700,
+                    fontSize = 12.dp.textSp,
+                    color = Color(0xff505d6f),
+                    lineHeight = 20.dp.textSp
+                ),
+                modifier = Modifier.align(CenterHorizontally)
+            )
+            AppText(
+                text = "${String.format("%.1f",goalTextAnimate)}kg",
+                style = TextStyle(
+                    fontWeight = FontWeight.W700,
+                    fontSize = 20.dp.textSp,
+                    color = Color(0xff111111),
+                    lineHeight = 30.dp.textSp
+                ),
+                modifier = Modifier.align(CenterHorizontally)
+            )
+        }
+
+        ColoredText(
+            text = "시작 ${startValue}kg",
+            targetText = "${startValue}kg",
+            targetWeight = FontWeight.W800,
+            targetColor = Color(0xFF505D6F),
+            style = TextStyle(
+                fontSize = 12.dp.textSp,
+                fontWeight = FontWeight.W400,
+                lineHeight = 20.dp.textSp,
+                fontFamily = Font.nanumSquareRoundFont,
+                color = Color(0xFF505D6F)
+            ),
+            modifier = Modifier
+                .align(BottomStart)
+        )
+
+        ColoredText(
+            text = "목표 ${goalValue}kg",
+            targetText = "${goalValue}kg",
+            targetWeight = FontWeight.W800,
+            targetColor = Color(0xFF505D6F),
+            style = TextStyle(
+                fontSize = 12.dp.textSp,
+                fontWeight = FontWeight.W400,
+                lineHeight = 20.dp.textSp,
+                fontFamily = Font.nanumSquareRoundFont,
+                color = Color(0xFF505D6F)
+            ),
+            modifier = Modifier
+                .align(BottomEnd)
+        )
+    }
+}
+
+@Composable
+fun BtnTest(
+    modifier: Modifier
+){
+    
+    var isExpanded by remember{ mutableStateOf(false) }
+    val expandedFabWidth by animateDpAsState(
+        targetValue = if (isExpanded) 191.dp else 60.dp,
+        animationSpec = spring(dampingRatio = 3f),
+        label = "width"
+    )
+
+    val expandedColor by animateColorAsState(
+        targetValue = if (isExpanded) Color.White else Color(0xffff4857),
+        animationSpec = spring(dampingRatio = 3f),
+        label = "color"
+    )
+
+    FloatingActionButton(
+        onClick = {  },
+        modifier = modifier.then(
+            Modifier
+                .width(expandedFabWidth)
+                .height(60.dp)
+        ),
+        shape = RoundedCornerShape(30.dp)
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(color = expandedColor)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .background(
+                        color = expandedColor
+                    )
+                    .align(Center)
+                    .clickable { isExpanded = true }
+            ) {
+                Text(
+                    text = "추가",
+                    style = TextStyle(
+                        fontSize = 14.dp.textSp,
+                        color = Color.White,
+                        fontWeight = FontWeight.W800
+                    ),
+                    modifier = Modifier.align(Center)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .width(191.dp)
+                        .height(60.dp)
+                        .border(
+                            width = 1.dp,
+                            color = Color(0xffff4857),
+                            shape = RoundedCornerShape(30.dp)
+                        )
+                        .background(
+                            color = Color.White
+                        ),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Text(
+                        text = "산책",
+                        style = TextStyle(
+                            fontSize = 14.dp.textSp,
+                            color = Color(0xffff4857),
+                            fontWeight = FontWeight.W800
+                        ),
+                        modifier = Modifier
+                            .align(CenterVertically)
+                            .clickable {
+                                isExpanded = false
+                            }
+                    )
+
+                    Text(
+                        text = "식사",
+                        style = TextStyle(
+                            fontSize = 14.dp.textSp,
+                            color = Color(0xffff4857),
+                            fontWeight = FontWeight.W800
+                        ),
+                        modifier = Modifier
+                            .align(CenterVertically)
+                            .clickable {
+                                isExpanded = false
+                            }
+                    )
+
+                    Text(
+                        text = "체중",
+                        style = TextStyle(
+                            fontSize = 14.dp.textSp,
+                            color = Color(0xffff4857),
+                            fontWeight = FontWeight.W800
+                        ),
+                        modifier = Modifier
+                            .align(CenterVertically)
+                            .clickable {
+                                isExpanded = false
+                            }
+                    )
+                }
+            }
+
+//            AnimatedVisibility(
+//                visible = !isExpanded,
+//                enter = fadeIn(),
+//                exit = fadeOut(),
+//                modifier = Modifier.align(Center)
+//            ) {
+//                Box(
+//                    modifier = Modifier
+//                        .size(60.dp)
+//                        .background(
+//                            color = expandedColor
+//                        )
+//                        .clickable { isExpanded = true }
+//                ) {
+//                    Text(
+//                        text = "추가",
+//                        style = TextStyle(
+//                            fontSize = 14.dp.textSp,
+//                            color = Color.White,
+//                            fontWeight = FontWeight.W800
+//                        ),
+//                        modifier = Modifier.align(Center)
+//                    )
+//                }
+//            }
+//            if(isExpanded){
+//                Row(
+//                    modifier = Modifier
+//                        .width(191.dp)
+//                        .height(60.dp)
+//                        .border(
+//                            width = 1.dp,
+//                            color = Color(0xffff4857),
+//                            shape = RoundedCornerShape(30.dp)
+//                        )
+//                        .background(
+//                            color = Color.White
+//                        ),
+//                    horizontalArrangement = Arrangement.SpaceEvenly
+//                ) {
+//                    Text(
+//                        text = "산책",
+//                        style = TextStyle(
+//                            fontSize = 14.dp.textSp,
+//                            color = Color(0xffff4857),
+//                            fontWeight = FontWeight.W800
+//                        ),
+//                        modifier = Modifier.align(CenterVertically)
+//                    )
+//
+//                    Text(
+//                        text = "식사",
+//                        style = TextStyle(
+//                            fontSize = 14.dp.textSp,
+//                            color = Color(0xffff4857),
+//                            fontWeight = FontWeight.W800
+//                        ),
+//                        modifier = Modifier.align(CenterVertically)
+//                    )
+//
+//                    Text(
+//                        text = "체중",
+//                        style = TextStyle(
+//                            fontSize = 14.dp.textSp,
+//                            color = Color(0xffff4857),
+//                            fontWeight = FontWeight.W800
+//                        ),
+//                        modifier = Modifier.align(CenterVertically)
+//                    )
+//                }
+//            }else{
+//                Box(
+//                    modifier = Modifier
+//                        .size(60.dp)
+//                        .background(
+//                            color = expandedColor
+//                        )
+//                        .align(Center)
+//                        .clickable { isExpanded = true }
+//                ) {
+//                    Text(
+//                        text = "추가",
+//                        style = TextStyle(
+//                            fontSize = 14.dp.textSp,
+//                            color = Color.White,
+//                            fontWeight = FontWeight.W800
+//                        ),
+//                        modifier = Modifier.align(Center)
+//                    )
+//                }
+//            }
+        }
+
     }
 }
 
@@ -3007,6 +3404,10 @@ fun Graph(
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val width = configuration.screenWidthDp.dpToPixel(context)
+    val orientation = configuration.orientation
+    val height  = configuration.screenHeightDp
+
+    val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val isEmptyList = points.find { it.y != null } == null
 
@@ -3038,9 +3439,11 @@ fun Graph(
     )
 
     var clickBarOffsetX by remember { mutableStateOf(0f) }
-    var selectPoint by remember {
-        mutableStateOf(SelectPoint())
-    }
+    var selectPoint by remember { mutableStateOf(SelectPoint()) }
+
+    var componentHeight by remember { mutableStateOf(if(isLandscape) height else 198) }
+    var canvasHeight by remember { mutableStateOf(componentHeight - 28) }
+
 
     val maxValue = points.maxOfOrNull { it.y ?: 0 } ?: 0
     val minValue = points.filter { it.y != null }.minOfOrNull { it.y ?: 0 } ?: 0
@@ -3074,9 +3477,11 @@ fun Graph(
         }
     }
 
+
+
     Box(
         modifier = modifier
-            .height(198.dp)
+            .height(componentHeight.dp)
             .background(Color.White)
             .padding(horizontal = 20.dp),
         contentAlignment = Center
@@ -3096,7 +3501,7 @@ fun Graph(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(170.dp)
+                .height(canvasHeight.dp)
                 .align(BottomCenter)
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -3141,6 +3546,8 @@ fun Graph(
             val valueToPx = (size.height - BOTTOM_PADDING.dp.toPx()) / yRange
 
             val xValueSpace = ceil(points.size.toFloat() / xSize).toInt()
+
+            log("qweqwe",xAxisSpace,size.width)
 
 
             for (i in points.indices step xValueSpace) {
